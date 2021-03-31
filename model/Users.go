@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"github.com/HeRaNO/xcpc-team-reg/config"
@@ -16,6 +17,13 @@ type UserRegister struct {
 	Email      string `json:"email"`
 	School     int    `json:"school"`
 	StuID      string `json:"stuid"`
+	EmailToken string `json:"email_token"`
+	PwdToken   string `json:"pwd_token"`
+	Action     string `json:"action"`
+}
+
+type UserResetPwd struct {
+	Email      string `json:"email"`
 	EmailToken string `json:"email_token"`
 	PwdToken   string `json:"pwd_token"`
 	Action     string `json:"action"`
@@ -63,4 +71,35 @@ func CreateNewUser(ctx context.Context, usr UserRegister, isAdmin int) error {
 		return err
 	}
 	return nil
+}
+
+func GetAdminByUserID(ctx context.Context, uid int64) (bool, error) {
+	rdb := config.RDB
+
+	rec := map[string]interface{}{}
+	result := rdb.Model(&User{}).Table(TableUserInfo).Select("is_admin").Where("user_id = ?", uid).Find(&rec)
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return false, errors.New("no user record")
+	}
+
+	if result.RowsAffected > 1 {
+		return false, errors.New("duplicate user_id but why???")
+	}
+
+	isAdmin := rec["is_admin"].(int)
+
+	if isAdmin == 0 {
+		return false, nil
+	}
+
+	if isAdmin != 1 {
+		return false, errors.New("why the is_admin is not 0 or 1")
+	}
+
+	return true, nil
 }

@@ -3,31 +3,36 @@ package routers
 import (
 	"net/http"
 
+	"github.com/HeRaNO/xcpc-team-reg/middleware"
 	"github.com/HeRaNO/xcpc-team-reg/modules"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chi_middleware "github.com/go-chi/chi/v5/middleware"
 )
 
 func InitRouters() http.Handler {
 	// Register routers...
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(chi_middleware.RequestID)
+	r.Use(chi_middleware.RealIP)
+	r.Use(chi_middleware.Logger)
+	r.Use(chi_middleware.Recoverer)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/", modules.SayHello)
 		r.Get("/getSchool", modules.GetSchool)
-
-		r.Post("/login", modules.Login)
 		r.Post("/register", modules.Register)
 		r.Post("/verifyEmail", modules.SendValidationEmail)
-		r.Post("/forgot", modules.ForgotPwd)
 
 		r.Group(func(r chi.Router) {
-			r.Use(modules.Authenticator)
+			r.Use(middleware.CheckUnauthorized)
+
+			r.Post("/login", modules.Login)
+			r.Post("/forgot", modules.ForgotPwd)
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.Authenticator)
 
 			r.Mount("/admin", adminRouter())
 
@@ -50,7 +55,9 @@ func InitRouters() http.Handler {
 
 func adminRouter() http.Handler {
 	r := chi.NewRouter()
-	r.Use(modules.CheckAdmin)
+	r.Use(middleware.CheckAdmin)
+
+	r.Get("/adminHello", modules.SayHelloAdmin)
 
 	r.Post("/export", modules.ExportTeamInfo)
 	r.Post("/createContest", modules.CreateContest)

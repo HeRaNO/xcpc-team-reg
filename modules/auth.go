@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"bytes"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -26,63 +25,6 @@ func generateJWTToken(uid int64, jwtSecret *string) (string, error) {
 		return "", err
 	}
 	return string(tokenByte), nil
-}
-
-func Authenticator(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, err := r.Cookie("jwt")
-		if err != nil {
-			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
-			return
-		}
-
-		tokenFromUser := []byte(token.Value)
-		t, err := jwt.Parse(tokenFromUser)
-		if err != nil {
-			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
-			return
-		}
-		err = jwt.Validate(t)
-		if err != nil {
-			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
-			return
-		}
-
-		id, ok := t.Get("id")
-		if !ok {
-			util.ErrorResponse(w, r, "payload error", config.ERR_UNAUTHORIZED)
-			return
-		}
-
-		uid, err := strconv.ParseInt(id.(string), 10, 64)
-		if err != nil {
-			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
-			return
-		}
-
-		secret, err := model.GetUserJWTSecret(r.Context(), uid)
-		if err != nil {
-			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
-			return
-		}
-		if secret == "" {
-			util.ErrorResponse(w, r, "login status expired", config.ERR_UNAUTHORIZED)
-			return
-		}
-
-		tokenItShouldBe, err := jwt.Sign(t, jwa.HS256, []byte(secret))
-		if err != nil {
-			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
-			return
-		}
-
-		if !bytes.Equal(tokenFromUser, tokenItShouldBe) {
-			util.ErrorResponse(w, r, "authentication failed", config.ERR_UNAUTHORIZED)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {

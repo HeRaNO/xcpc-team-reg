@@ -264,7 +264,7 @@ func AddAuthInfo(ctx context.Context, info *Auth) error {
 func ValidateAuthInfo(ctx context.Context, uid int64, email *string, token *string) error {
 	rdb := config.RDB
 
-	rec := map[string]interface{}{}
+	rec := make([]Auth, 0)
 	result := rdb.Model(&Auth{}).Table(TableAuthInfo).Where("user_id = ?", uid).Find(&rec)
 
 	if result.Error != nil {
@@ -279,12 +279,14 @@ func ValidateAuthInfo(ctx context.Context, uid int64, email *string, token *stri
 		return errors.New("duplicate user_id but why???")
 	}
 
-	if *email != rec["email"] {
+	usrAuth := rec[0]
+
+	if *email != usrAuth.Email {
 		log.Println("[ERROR] ValidateAuthInfo(): user_id in Redis is different from it in database")
 		return errors.New("data inconsistent")
 	}
 
-	if *token != rec["pwd"] {
+	if *token != usrAuth.Pwd {
 		return errors.New("wrong password")
 	}
 

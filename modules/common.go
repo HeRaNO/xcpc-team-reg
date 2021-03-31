@@ -18,3 +18,9 @@ func SayHello(w http.ResponseWriter, r *http.Request) {
 
 	util.SuccessResponse(w, r, "xcpc-team-reg")
 }
+
+func SayHelloAdmin(w http.ResponseWriter, r *http.Request) {
+	// just say hello
+
+	util.SuccessResponse(w, r, "xcpc-team-reg admin")
+}

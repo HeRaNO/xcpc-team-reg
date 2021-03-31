@@ -19,15 +19,21 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	bd, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
 	}
 
 	usrinfo := model.UserRegister{}
 	err = jsoniter.Unmarshal(bd, &usrinfo)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
 	}
 
-	uid, _ := model.GetUserIDByEmail(r.Context(), &usrinfo.Email)
+	uid, err := model.GetUserIDByEmail(r.Context(), &usrinfo.Email)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
 	if uid != -1 {
 		util.ErrorResponse(w, r, "email has already registered", config.ERR_WRONGINFO)
 		return
@@ -54,5 +60,28 @@ func Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func ForgotPwd(w http.ResponseWriter, r *http.Request) {
-	// ...
+	defer r.Body.Close()
+	bd, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	usrinfo := model.UserRegister{}
+	err = jsoniter.Unmarshal(bd, &usrinfo)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	uid, err := model.GetUserIDByEmail(r.Context(), &usrinfo.Email)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if uid == -1 {
+		util.ErrorResponse(w, r, "no such user", config.ERR_WRONGINFO)
+		return
+	}
+
 }
