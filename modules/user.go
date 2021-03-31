@@ -9,7 +9,9 @@ import (
 func GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	// Fetch from RDB
 	// return info
-	util.SuccessResponse(w, r, "hello")
+
+	uid := getUserIDFromReq(r)
+	util.SuccessResponse(w, r, map[string]int64{"uid": uid})
 }
 
 func ModifyUserInfo(w http.ResponseWriter, r *http.Request) {

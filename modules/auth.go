@@ -27,6 +27,23 @@ func generateJWTToken(uid int64, jwtSecret *string) (string, error) {
 	return string(tokenByte), nil
 }
 
+// Must insure it can get user_id from request
+func getUserIDFromReq(r *http.Request) int64 {
+	token, _ := r.Cookie("jwt")
+	jwtToken := token.Value
+	t, _ := jwt.Parse([]byte(jwtToken))
+	id, _ := t.Get("id")
+	uid, _ := strconv.ParseInt(id.(string), 10, 64)
+	return uid
+}
+
+// Must insure it can get jwt from cookies
+func getJWTFromReq(r *http.Request) string {
+	token, _ := r.Cookie("jwt")
+	jwtToken := token.Value
+	return jwtToken
+}
+
 func Login(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	bd, err := ioutil.ReadAll(r.Body)
@@ -82,11 +99,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	token, _ := r.Cookie("jwt")
-	jwtToken := token.Value
-	t, _ := jwt.Parse([]byte(jwtToken))
-	id, _ := t.Get("id")
-	uid, _ := strconv.ParseInt(id.(string), 10, 64)
+	uid := getUserIDFromReq(r)
 	err := model.DelUserJWTSecret(r.Context(), uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
@@ -95,7 +108,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 
 	jwtCookie := http.Cookie{
 		Name:     "jwt",
-		Value:    jwtToken,
+		Value:    getJWTFromReq(r),
 		HttpOnly: true,
 		MaxAge:   -1,
 	}
