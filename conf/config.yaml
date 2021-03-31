@@ -1,0 +1,37 @@
+# FILL THE EMPTY VALUE ON YOUR OWN
+RDB:
+  Host: "localhost"
+  Port: 5432
+  Username: ""
+  Password: ""
+  DBName: "xcpc_team_reg"
+  TimeZone: "" # Asia/Shanghai
+Redis:
+  Host: "localhost"
+  Port: 6379
+  Password: ""
+  DB: 0
+Server:
+  Port: 12345
+  SMTPAddr: ""
+  SMTPPort: 
+  EmailSign: ""
+  EmailAlias: ""
+  EmailAddr: ""
+  EmailPassword: ""
+  EmailServer: ""
+  EmailTokenLength: 8 # The length of token in email verification
+  EmailAction: # DO NOT CHANGE THE KEYS
+    register: "注册账户"
+    changepwd: "更改密码"
+    changeemail: "更改邮箱"
+    reset: "重置密码"
+  EmailSubject: # DO NOT CHANGE THE KEYS
+    register: "邮箱验证邮件 - 注册账户"
+    changepwd: "邮箱验证邮件 - 更改密码"
+    changeemail: "邮箱验证邮件 - 更改邮箱"
+    reset: "邮箱验证邮件 - 重置密码"
+Const:
+  ValidStuIDLength: [13] # Just an example
+  SchoolName: # Should be identical to the offical website
+    - "School 1" # Just an example
