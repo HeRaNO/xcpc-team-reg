@@ -38,7 +38,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = model.ValidateEmailToken(r.Context(), &usrinfo.Email, &usrinfo.EmailToken)
+	err = model.ValidateEmailToken(r.Context(), &usrinfo.Email, &usrinfo.EmailToken, &usrinfo.Action)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_WRONGINFO)
 		return

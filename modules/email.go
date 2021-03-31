@@ -77,6 +77,11 @@ func SendValidationEmail(w http.ResponseWriter, r *http.Request) {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
 	}
+	err = model.SetEmailAction(r.Context(), &info.Email, &info.Type)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
 
 	model.SetEmailRequest(r.Context(), &info.Email)
 	if err != nil {

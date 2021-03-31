@@ -53,6 +53,11 @@ func MakeEmailRequestKey(email *string) string {
 	return ret
 }
 
+func MakeEmailActionKey(email *string) string {
+	ret := fmt.Sprintf("EMAILACTION:%s", *email)
+	return ret
+}
+
 func GetEmailToken(ctx context.Context, email *string) (string, error) {
 	key := MakeEmailTokenKey(email)
 	ret, err := config.RedisClient.Get(ctx, key).Result()
@@ -81,21 +86,6 @@ func DelEmailToken(ctx context.Context, email *string) error {
 	err := config.RedisClient.Del(ctx, key).Err()
 	if err != nil {
 		log.Println("[ERROR] DelEmailToken(): redis del error")
-		return err
-	}
-	return nil
-}
-
-func ValidateEmailToken(ctx context.Context, email *string, token *string) error {
-	tokenFromRedis, err := GetEmailToken(ctx, email)
-	if err != nil {
-		return err
-	}
-	if tokenFromRedis == "" || tokenFromRedis != *token {
-		return errors.New("token is invalid")
-	}
-	err = DelEmailToken(ctx, email)
-	if err != nil {
 		return err
 	}
 	return nil
@@ -183,6 +173,50 @@ func GetEmailRequest(ctx context.Context, email *string) error {
 		return err
 	}
 	return errors.New("email request too frequent")
+}
+
+func GetEmailAction(ctx context.Context, email *string) (string, error) {
+	key := MakeEmailRequestKey(email)
+	ret, err := config.RedisClient.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", nil
+	} else if err != nil {
+		log.Println("[ERROR] GetEmailRequest(): redis query error")
+		return "", err
+	}
+	return ret, nil
+}
+
+func SetEmailAction(ctx context.Context, email *string, action *string) error {
+	key := MakeEmailActionKey(email)
+	err := config.RedisClient.Set(ctx, key, *action, 0).Err()
+	if err != nil {
+		log.Println("[ERROR] SetEmailAction(): redis set error")
+		return err
+	}
+	return nil
+}
+
+func ValidateEmailToken(ctx context.Context, email *string, token *string, action *string) error {
+	actionFromRedis, err := GetEmailAction(ctx, email)
+	if err != nil {
+		return err
+	}
+	if actionFromRedis == "" || actionFromRedis != *action {
+		return errors.New("action is invalid")
+	}
+	tokenFromRedis, err := GetEmailToken(ctx, email)
+	if err != nil {
+		return err
+	}
+	if tokenFromRedis == "" || tokenFromRedis != *token {
+		return errors.New("token is invalid")
+	}
+	err = DelEmailToken(ctx, email)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func AddAuthInfo(ctx context.Context, info *Auth) error {

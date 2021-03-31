@@ -18,6 +18,7 @@ type UserRegister struct {
 	StuID      string `json:"stuid"`
 	EmailToken string `json:"email_token"`
 	PwdToken   string `json:"pwd_token"`
+	Action     string `json:"action"`
 }
 
 type User struct {
