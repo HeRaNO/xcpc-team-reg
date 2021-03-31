@@ -67,7 +67,7 @@ func ForgotPwd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usrinfo := model.UserRegister{}
+	usrinfo := model.UserResetPwd{}
 	err = jsoniter.Unmarshal(bd, &usrinfo)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
@@ -84,4 +84,17 @@ func ForgotPwd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = model.ValidateEmailToken(r.Context(), &usrinfo.Email, &usrinfo.EmailToken, &usrinfo.Action)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_WRONGINFO)
+		return
+	}
+
+	err = model.ResetUserPwd(r.Context(), uid, &usrinfo.PwdToken)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	util.SuccessResponse(w, r, "ok")
 }

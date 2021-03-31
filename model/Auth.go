@@ -184,7 +184,7 @@ func SetEmailRequest(ctx context.Context, email *string) error {
 }
 
 func GetEmailAction(ctx context.Context, email *string) (string, error) {
-	key := MakeEmailRequestKey(email)
+	key := MakeEmailActionKey(email)
 	ret, err := config.RedisClient.Get(ctx, key).Result()
 	if err == redis.Nil {
 		return "", nil
@@ -265,7 +265,7 @@ func ValidateAuthInfo(ctx context.Context, uid int64, email *string, token *stri
 	rdb := config.RDB
 
 	rec := make([]Auth, 0)
-	result := rdb.Model(&Auth{}).Table(TableAuthInfo).Where("user_id = ?", uid).Find(&rec)
+	result := rdb.WithContext(ctx).Model(&Auth{}).Table(TableAuthInfo).Where("user_id = ?", uid).Find(&rec)
 
 	if result.Error != nil {
 		return result.Error
@@ -290,5 +290,21 @@ func ValidateAuthInfo(ctx context.Context, uid int64, email *string, token *stri
 		return errors.New("wrong password")
 	}
 
+	return nil
+}
+
+func ResetUserPwd(ctx context.Context, uid int64, pwdToken *string) error {
+	trans := config.RDB.Begin()
+
+	err := trans.WithContext(ctx).Model(&Auth{}).Table(TableAuthInfo).Where("user_id = ?", uid).Update("pwd", *pwdToken).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+
+	if err := trans.Commit().Error; nil != err {
+		log.Println("[ERROR] ResetUserPwd(): transaction failed")
+		return err
+	}
 	return nil
 }
