@@ -3,10 +3,17 @@ package config
 import (
 	"log"
 	"sync"
+	"time"
 )
 
 var SchoolMap map[int]string
 var StuIDMap map[int]bool
+
+const (
+	LOGIN_EXPIRETIME      = 24 * time.Hour
+	EMAILTOKEN_EXPIRETIME = 10 * time.Minute
+	EMAILSEND_GAPTIME     = 2 * time.Minute
+)
 
 func initConst(wg *sync.WaitGroup) {
 	defer wg.Done()

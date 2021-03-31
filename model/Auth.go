@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"time"
 
 	"github.com/HeRaNO/xcpc-team-reg/config"
-	"github.com/HeRaNO/xcpc-team-reg/util"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -73,7 +71,7 @@ func GetEmailToken(ctx context.Context, email *string) (string, error) {
 
 func SetEmailToken(ctx context.Context, email *string, token *string) error {
 	key := MakeEmailTokenKey(email)
-	err := config.RedisClient.SetEX(ctx, key, *token, 10*time.Minute).Err()
+	err := config.RedisClient.SetEX(ctx, key, *token, config.EMAILTOKEN_EXPIRETIME).Err()
 	if err != nil {
 		log.Println("[ERROR] SetEmailToken(): redis set error")
 		return err
@@ -145,7 +143,7 @@ func GetUserJWTSecret(ctx context.Context, uid int64) (string, error) {
 
 func SetUserJWTSecret(ctx context.Context, uid int64, token *string) error {
 	key := MakeUserJWTSecretKey(uid)
-	err := config.RedisClient.Set(ctx, key, *token, 0).Err()
+	err := config.RedisClient.SetEX(ctx, key, *token, config.LOGIN_EXPIRETIME).Err()
 	if err != nil {
 		log.Println("[ERROR] SetUserJWTSecret(): redis set error")
 		return err
@@ -153,11 +151,11 @@ func SetUserJWTSecret(ctx context.Context, uid int64, token *string) error {
 	return nil
 }
 
-func SetEmailRequest(ctx context.Context, email *string) error {
-	key := MakeEmailRequestKey(email)
-	err := config.RedisClient.SetEX(ctx, key, time.Now().Unix(), 2*time.Minute).Err()
+func DelUserJWTSecret(ctx context.Context, uid int64) error {
+	key := MakeUserJWTSecretKey(uid)
+	err := config.RedisClient.Del(ctx, key).Err()
 	if err != nil {
-		log.Println("[ERROR] SetEmailRequest(): redis set error")
+		log.Println("[ERROR] DelUserJWTSecret(): redis del error")
 		return err
 	}
 	return nil
@@ -175,6 +173,16 @@ func GetEmailRequest(ctx context.Context, email *string) error {
 	return errors.New("email request too frequent")
 }
 
+func SetEmailRequest(ctx context.Context, email *string) error {
+	key := MakeEmailRequestKey(email)
+	err := config.RedisClient.SetEX(ctx, key, "1", config.EMAILSEND_GAPTIME).Err()
+	if err != nil {
+		log.Println("[ERROR] SetEmailRequest(): redis set error")
+		return err
+	}
+	return nil
+}
+
 func GetEmailAction(ctx context.Context, email *string) (string, error) {
 	key := MakeEmailRequestKey(email)
 	ret, err := config.RedisClient.Get(ctx, key).Result()
@@ -189,9 +197,19 @@ func GetEmailAction(ctx context.Context, email *string) (string, error) {
 
 func SetEmailAction(ctx context.Context, email *string, action *string) error {
 	key := MakeEmailActionKey(email)
-	err := config.RedisClient.Set(ctx, key, *action, 0).Err()
+	err := config.RedisClient.SetEX(ctx, key, *action, config.EMAILTOKEN_EXPIRETIME).Err()
 	if err != nil {
 		log.Println("[ERROR] SetEmailAction(): redis set error")
+		return err
+	}
+	return nil
+}
+
+func DelEmailAction(ctx context.Context, email *string) error {
+	key := MakeEmailActionKey(email)
+	err := config.RedisClient.Del(ctx, key).Err()
+	if err != nil {
+		log.Println("[ERROR] DelEmailAction(): redis del error")
 		return err
 	}
 	return nil
@@ -216,6 +234,10 @@ func ValidateEmailToken(ctx context.Context, email *string, token *string, actio
 	if err != nil {
 		return err
 	}
+	err = DelEmailAction(ctx, email)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -225,12 +247,7 @@ func AddAuthInfo(ctx context.Context, info *Auth) error {
 	if err != nil {
 		return err
 	}
-	token := util.GenToken(20)
-	err = SetUserJWTSecret(ctx, info.UserID, &token)
-	if err != nil {
-		DelEmailUserID(ctx, &info.Email)
-		return err
-	}
+
 	err = trans.WithContext(ctx).Model(&Auth{}).Table(TableAuthInfo).Create(info).Error
 	if err != nil {
 		trans.WithContext(ctx).Rollback()

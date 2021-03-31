@@ -1,8 +1,8 @@
 package modules
 
 import (
+	"bytes"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,7 +18,7 @@ import (
 func generateJWTToken(uid int64, jwtSecret *string) (string, error) {
 	t := jwt.New()
 	t.Set(jwt.IssuedAtKey, time.Now().Unix())
-	t.Set(jwt.ExpirationKey, time.Now().Add(24*time.Hour).Unix())
+	t.Set(jwt.ExpirationKey, time.Now().Add(config.LOGIN_EXPIRETIME).Unix())
 	idToken := strconv.FormatInt(uid, 10)
 	t.Set("id", idToken)
 	tokenByte, err := jwt.Sign(t, jwa.HS256, []byte(*jwtSecret))
@@ -35,7 +35,9 @@ func Authenticator(next http.Handler) http.Handler {
 			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
 			return
 		}
-		t, err := jwt.Parse([]byte(token.Value))
+
+		tokenFromUser := []byte(token.Value)
+		t, err := jwt.Parse(tokenFromUser)
 		if err != nil {
 			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
 			return
@@ -58,7 +60,27 @@ func Authenticator(next http.Handler) http.Handler {
 			return
 		}
 
-		log.Printf("[INFO] user_id: %d", uid)
+		secret, err := model.GetUserJWTSecret(r.Context(), uid)
+		if err != nil {
+			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
+			return
+		}
+		if secret == "" {
+			util.ErrorResponse(w, r, "login status expired", config.ERR_UNAUTHORIZED)
+			return
+		}
+
+		tokenItShouldBe, err := jwt.Sign(t, jwa.HS256, []byte(secret))
+		if err != nil {
+			util.ErrorResponse(w, r, err.Error(), config.ERR_UNAUTHORIZED)
+			return
+		}
+
+		if !bytes.Equal(tokenFromUser, tokenItShouldBe) {
+			util.ErrorResponse(w, r, "authentication failed", config.ERR_UNAUTHORIZED)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -93,13 +115,14 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtSecret, err := model.GetUserJWTSecret(r.Context(), uid)
+	secretToken := util.GenToken(20)
+	err = model.SetUserJWTSecret(r.Context(), uid, &secretToken)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
 	}
 
-	jwtToken, err := generateJWTToken(uid, &jwtSecret)
+	jwtToken, err := generateJWTToken(uid, &secretToken)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
@@ -108,7 +131,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	jwtCookie := http.Cookie{
 		Name:     "jwt",
 		Value:    jwtToken,
-		Expires:  time.Now().Add(24 * time.Hour),
+		Expires:  time.Now().Add(config.LOGIN_EXPIRETIME),
 		HttpOnly: true,
 	}
 
@@ -117,5 +140,24 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	// ...
+	token, _ := r.Cookie("jwt")
+	jwtToken := token.Value
+	t, _ := jwt.Parse([]byte(jwtToken))
+	id, _ := t.Get("id")
+	uid, _ := strconv.ParseInt(id.(string), 10, 64)
+	err := model.DelUserJWTSecret(r.Context(), uid)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	jwtCookie := http.Cookie{
+		Name:     "jwt",
+		Value:    jwtToken,
+		HttpOnly: true,
+		MaxAge:   -1,
+	}
+
+	http.SetCookie(w, &jwtCookie)
+	util.SuccessResponse(w, r, "ok")
 }
