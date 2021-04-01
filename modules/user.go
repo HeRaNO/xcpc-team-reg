@@ -1,9 +1,13 @@
 package modules
 
 import (
+	"io/ioutil"
 	"net/http"
 
+	"github.com/HeRaNO/xcpc-team-reg/config"
+	"github.com/HeRaNO/xcpc-team-reg/model"
 	"github.com/HeRaNO/xcpc-team-reg/util"
+	jsoniter "github.com/json-iterator/go"
 )
 
 func GetUserInfo(w http.ResponseWriter, r *http.Request) {
@@ -11,10 +15,49 @@ func GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	// return info
 
 	uid := getUserIDFromReq(r)
-	util.SuccessResponse(w, r, map[string]int64{"uid": uid})
+	info, err := model.GetUserInfoByID(r.Context(), uid)
+
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if info == nil {
+		util.ErrorResponse(w, r, "no user record but why???", config.ERR_INTERNAL)
+		return
+	}
+
+	util.SuccessResponse(w, r, *info)
 }
 
 func ModifyUserInfo(w http.ResponseWriter, r *http.Request) {
 	// validate info
 	// write to RDB
+	defer r.Body.Close()
+
+	bd, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	usrinfo := model.UserInfoModify{}
+	err = jsoniter.Unmarshal(bd, &usrinfo)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	if !config.StuIDMap[len(usrinfo.StuID)] { // Just a naive check
+		util.ErrorResponse(w, r, "student id's length is wrong", config.ERR_WRONGINFO)
+		return
+	}
+
+	uid := getUserIDFromReq(r)
+	err = model.ModifyUserInfoByID(r.Context(), uid, &usrinfo)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	util.SuccessResponse(w, r, "ok")
 }

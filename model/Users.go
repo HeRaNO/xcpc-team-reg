@@ -29,6 +29,19 @@ type UserResetPwd struct {
 	Action     string `json:"action"`
 }
 
+type UserInfo struct {
+	Name       string `json:"name"`
+	School     string `json:"school"`
+	StuID      string `json:"stuid"`
+	BelongTeam int64  `json:"teamid"`
+}
+
+type UserInfoModify struct {
+	Name   string `gorm:"column:user_name" json:"name"`
+	School int    `gorm:"column:school" json:"school"`
+	StuID  string `gorm:"column:stu_id" json:"stuid"`
+}
+
 type User struct {
 	UserID     int64  `gorm:"column:user_id;primaryKey" json:"userid"`
 	Name       string `gorm:"column:user_name" json:"name"`
@@ -70,6 +83,56 @@ func CreateNewUser(ctx context.Context, usr UserRegister, isAdmin int) error {
 		log.Println("[ERROR] CreateNewUser(): transaction failed")
 		return err
 	}
+	return nil
+}
+
+func GetUserInfoByID(ctx context.Context, uid int64) (*UserInfo, error) {
+	rdb := config.RDB
+
+	rec := make([]User, 0)
+	result := rdb.Model(&User{}).Table(TableUserInfo).Where("user_id = ?", uid).Find(&rec)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return nil, errors.New("no user record")
+	}
+
+	if result.RowsAffected > 1 {
+		return nil, errors.New("duplicate user_id but why???")
+	}
+
+	usrSchool := "undefined"
+
+	if school, ok := config.SchoolMap[rec[0].School]; ok {
+		usrSchool = school
+	}
+
+	usrinfo := &UserInfo{
+		Name:       rec[0].Name,
+		School:     usrSchool,
+		StuID:      rec[0].StuID,
+		BelongTeam: rec[0].BelongTeam,
+	}
+
+	return usrinfo, nil
+}
+
+func ModifyUserInfoByID(ctx context.Context, uid int64, usrinfo *UserInfoModify) error {
+	trans := config.RDB.Begin()
+
+	err := trans.WithContext(ctx).Model(&UserInfoModify{}).Table(TableUserInfo).Where("user_id = ?", uid).Updates(usrinfo).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+
+	if err := trans.Commit().Error; err != nil {
+		log.Println("[ERROR] ModifyUserInfoByID: transaction failed")
+		return err
+	}
+
 	return nil
 }
 
