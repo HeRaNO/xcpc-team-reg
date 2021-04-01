@@ -183,9 +183,64 @@ func ModifyUserInfoByID(ctx context.Context, uid int64, usrinfo *UserInfoModify)
 	}
 
 	if err := trans.Commit().Error; err != nil {
-		log.Println("[ERROR] ModifyUserInfoByID: transaction failed")
+		log.Println("[ERROR] ModifyUserInfoByID(): transaction failed")
 		return err
 	}
 
 	return nil
+}
+
+func UpdateTeamIDByUserID(ctx context.Context, uid int64, tid int64) error {
+	trans := config.RDB.Begin()
+
+	err := trans.WithContext(ctx).Table(TableUserInfo).Where("user_id = ?", uid).Update("belong_team", tid).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+
+	if err := trans.Commit().Error; err != nil {
+		log.Println("[ERROR] UpdateTeamIDByUserID(): transaction failed")
+		return err
+	}
+	return nil
+}
+
+func GetUserInfoByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
+	rdb := config.RDB
+
+	rec := make([]User, 0)
+	result := rdb.Model(&User{}).Table(TableUserInfo).Where("belong_team = ?", tid).Find(&rec)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return nil, errors.New("no user in this team but why???")
+	}
+
+	if result.RowsAffected > 3 {
+		return nil, errors.New("too many members in this team but why???")
+	}
+
+	usrInfo := make([]UserInfo, 0)
+
+	for _, usr := range rec {
+		usrSchool := "undefined"
+
+		if school, ok := config.SchoolMap[usr.School]; ok {
+			usrSchool = school
+		}
+		info := UserInfo{
+			Name:       usr.Name,
+			School:     usrSchool,
+			StuID:      usr.StuID,
+			BelongTeam: usr.BelongTeam,
+		}
+
+		usrInfo = append(usrInfo, info)
+	}
+
+	return usrInfo, nil
 }

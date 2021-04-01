@@ -1,6 +1,15 @@
 package modules
 
-import "net/http"
+import (
+	"io/ioutil"
+	"net/http"
+	"unicode/utf8"
+
+	"github.com/HeRaNO/xcpc-team-reg/config"
+	"github.com/HeRaNO/xcpc-team-reg/model"
+	"github.com/HeRaNO/xcpc-team-reg/util"
+	jsoniter "github.com/json-iterator/go"
+)
 
 // User create a team
 func CreateTeam(w http.ResponseWriter, r *http.Request) {
@@ -8,6 +17,60 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 	// If user join in a team -> failed, must quit the original team
 	// insert record to RDB
 	// user.team_id <- team_id
+
+	uid := getUserIDFromReq(r)
+	tid, err := model.GetTeamIDByUserID(r.Context(), uid)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if tid != 0 {
+		util.ErrorResponse(w, r, "user has already joined in a team", config.ERR_WRONGINFO)
+		return
+	}
+
+	defer r.Body.Close()
+	bd, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	teamInfo := model.TeamInfoModify{}
+	err = jsoniter.Unmarshal(bd, &teamInfo)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	teamName := teamInfo.TeamName
+	nameLength := utf8.RuneCountInString(teamName)
+	if nameLength < 1 {
+		util.ErrorResponse(w, r, "team name cannot be empty", config.ERR_WRONGINFO)
+		return
+	}
+	if nameLength > config.MaxTeamNameLength {
+		util.ErrorResponse(w, r, "team name too long", config.ERR_WRONGINFO)
+		return
+	}
+
+	used, err := model.IsTeamNameUsed(r.Context(), &teamName)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if used {
+		util.ErrorResponse(w, r, "team name is used", config.ERR_WRONGINFO)
+		return
+	}
+
+	inviteToken, err := model.CreateNewTeam(r.Context(), &teamName, uid)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	util.SuccessResponse(w, r, inviteToken)
 }
 
 // User join in a team

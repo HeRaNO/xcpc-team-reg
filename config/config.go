@@ -34,22 +34,23 @@ type RedisConfig struct {
 }
 
 type SrvConfig struct {
-	Port             int               `yaml:"Port"`
-	SMTPAddr         string            `yaml:"SMTPAddr"`
-	SMTPPort         int               `yaml:"SMTPPort"`
-	EmailAddr        string            `yaml:"EmailAddr"`
-	EmailPassword    string            `yaml:"EmailPassword"`
-	EmailServer      string            `yaml:"EmailServer"`
-	EmailSign        string            `yaml:"EmailSign"`
-	EmailAlias       string            `yaml:"EmailAlias"`
-	EmailTokenLength int               `yaml:"EmailTokenLength"`
-	EmailAction      map[string]string `yaml:"EmailAction"`
-	EmailSubject     map[string]string `yaml:"EmailSubject"`
+	Port          int               `yaml:"Port"`
+	SMTPAddr      string            `yaml:"SMTPAddr"`
+	SMTPPort      int               `yaml:"SMTPPort"`
+	EmailAddr     string            `yaml:"EmailAddr"`
+	EmailPassword string            `yaml:"EmailPassword"`
+	EmailServer   string            `yaml:"EmailServer"`
+	EmailSign     string            `yaml:"EmailSign"`
+	EmailAlias    string            `yaml:"EmailAlias"`
+	EmailAction   map[string]string `yaml:"EmailAction"`
+	EmailSubject  map[string]string `yaml:"EmailSubject"`
 }
 
 type ConstConfig struct {
-	ValidStuIDLength []int    `yaml:"ValidStuIDLength"`
-	SchoolName       []string `yaml:"SchoolName"`
+	MaxTeamNameLength int      `yaml:"MaxTeamNameLength"`
+	UserTokenLength   int      `yaml:"UserTokenLength"`
+	ValidStuIDLength  []int    `yaml:"ValidStuIDLength"`
+	SchoolName        []string `yaml:"SchoolName"`
 }
 
 func initConfigFile(filePath *string) {

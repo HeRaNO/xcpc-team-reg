@@ -20,7 +20,6 @@ Server:
   EmailAddr: ""
   EmailPassword: ""
   EmailServer: ""
-  EmailTokenLength: 8 # The length of token in email verification
   EmailAction: # DO NOT CHANGE THE KEYS
     register: "注册账户"
     changepwd: "更改密码"
@@ -32,6 +31,8 @@ Server:
     changeemail: "邮箱验证邮件 - 更改邮箱"
     reset: "邮箱验证邮件 - 重置密码"
 Const:
+  MaxTeamNameLength: 25
+  UserTokenLength: 8 # The length of token in email verification and join in a team
   ValidStuIDLength: [13] # Just an example
   SchoolName: # Should be identical to the offical website
     - "School 1" # Just an example

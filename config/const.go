@@ -8,6 +8,7 @@ import (
 
 var SchoolMap map[int]string
 var StuIDMap map[int]bool
+var MaxTeamNameLength, UserTokenLength int
 
 const (
 	LOGIN_EXPIRETIME      = 24 * time.Hour
@@ -30,5 +31,6 @@ func initConst(wg *sync.WaitGroup) {
 	for _, stuIDLength := range config.ValidStuIDLength {
 		StuIDMap[stuIDLength] = true
 	}
+	MaxTeamNameLength, UserTokenLength = config.MaxTeamNameLength, config.UserTokenLength
 	log.Println("[INFO] init const finished successfully")
 }

@@ -7,7 +7,6 @@ import (
 )
 
 var ListenPort string
-var EmailTokenLength int
 var SMTPAddr, SMTPHost string
 var SMTPPort int
 var EmailSign, EmailAddr, EmailPassword, EmailServer, EmailAlias, EmailFrom string
@@ -22,7 +21,6 @@ func initServer(wg *sync.WaitGroup) {
 	}
 	config := conf.Srv
 	ListenPort = fmt.Sprintf(":%d", config.Port)
-	EmailTokenLength = config.EmailTokenLength
 	EmailSign, EmailAddr, EmailPassword = config.EmailSign, config.EmailAddr, config.EmailPassword
 	EmailServer, EmailAlias = config.EmailServer, config.EmailAlias
 	EmailFrom = fmt.Sprintf("%s <%s>", EmailAlias, EmailAddr)
