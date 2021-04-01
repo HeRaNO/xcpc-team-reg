@@ -37,7 +37,7 @@ func InitRouters() http.Handler {
 			r.Mount("/admin", adminRouter())
 
 			r.Get("/getUserInfo", modules.GetUserInfo)
-			r.Post("/getTeamInfo", modules.GetTeamInfo)
+			r.Get("/getTeamInfo", modules.GetTeamInfo)
 
 			r.Post("/modifyUserInfo", modules.ModifyUserInfo)
 			r.Post("/modifyTeamInfo", modules.ModifyTeamInfo)

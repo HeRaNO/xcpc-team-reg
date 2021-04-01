@@ -119,23 +119,6 @@ func GetUserInfoByID(ctx context.Context, uid int64) (*UserInfo, error) {
 	return usrinfo, nil
 }
 
-func ModifyUserInfoByID(ctx context.Context, uid int64, usrinfo *UserInfoModify) error {
-	trans := config.RDB.Begin()
-
-	err := trans.WithContext(ctx).Model(&UserInfoModify{}).Table(TableUserInfo).Where("user_id = ?", uid).Updates(usrinfo).Error
-	if err != nil {
-		trans.WithContext(ctx).Rollback()
-		return err
-	}
-
-	if err := trans.Commit().Error; err != nil {
-		log.Println("[ERROR] ModifyUserInfoByID: transaction failed")
-		return err
-	}
-
-	return nil
-}
-
 func GetAdminByUserID(ctx context.Context, uid int64) (bool, error) {
 	rdb := config.RDB
 
@@ -165,4 +148,44 @@ func GetAdminByUserID(ctx context.Context, uid int64) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func GetTeamIDByUserID(ctx context.Context, uid int64) (int64, error) {
+	rdb := config.RDB
+
+	rec := map[string]interface{}{}
+	result := rdb.Model(&User{}).Table(TableUserInfo).Select("belong_team").Where("user_id = ?", uid).Find(&rec)
+
+	if result.Error != nil {
+		return -1, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return -1, errors.New("no user record")
+	}
+
+	if result.RowsAffected > 1 {
+		return -1, errors.New("duplicate user_id but why???")
+	}
+
+	teamID := rec["belong_team"].(int64)
+
+	return teamID, nil
+}
+
+func ModifyUserInfoByID(ctx context.Context, uid int64, usrinfo *UserInfoModify) error {
+	trans := config.RDB.Begin()
+
+	err := trans.WithContext(ctx).Model(&UserInfoModify{}).Table(TableUserInfo).Where("user_id = ?", uid).Updates(usrinfo).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+
+	if err := trans.Commit().Error; err != nil {
+		log.Println("[ERROR] ModifyUserInfoByID: transaction failed")
+		return err
+	}
+
+	return nil
 }
