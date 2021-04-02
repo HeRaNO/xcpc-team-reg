@@ -20,17 +20,24 @@ type TeamInfoModify struct {
 	TeamName string `json:"team_name"`
 }
 
+type JoinTeamRequest struct {
+	TeamID      int64  `json:"team_id"`
+	InviteToken string `json:"invite_token"`
+}
+
 type TeamInfo struct {
-	TeamName     string     `json:"teamname"`
+	TeamID       int64      `json:"team_id"`
+	TeamName     string     `json:"team_name"`
 	TeamAccount  string     `json:"account"`
 	TeamPassword string     `json:"password"`
 	InviteToken  string     `json:"invite_token"`
 	TeamMember   []UserInfo `json:"member"`
+	MemberCnt    int        `json:"mem_cnt"`
 }
 
 type Team struct {
-	TeamID       int64  `gorm:"column:team_id;primaryKey" json:"teamid"`
-	TeamName     string `gorm:"column:team_name" json:"teamname"`
+	TeamID       int64  `gorm:"column:team_id;primaryKey" json:"team_id"`
+	TeamName     string `gorm:"column:team_name" json:"team_name"`
 	MemberCnt    int    `gorm:"column:member_cnt" json:"memcnt"`
 	TeamAccount  string `gorm:"column:team_account" json:"account"`
 	TeamPassword string `gorm:"column:team_password" json:"password"`
@@ -124,6 +131,20 @@ func DelTeamInviteToken(ctx context.Context, tid int64) error {
 	return nil
 }
 
+func ValidateTeamInviteToken(ctx context.Context, tid int64, token *string) (bool, error) {
+	tokenFromRedis, err := GetTeamInviteToken(ctx, tid)
+	if tokenFromRedis == "" || err == redis.Nil {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if *token != tokenFromRedis {
+		return false, nil
+	}
+	return true, nil
+}
+
 func CreateNewTeam(ctx context.Context, tname *string, uid int64) (string, error) {
 	err := AddTeamName(ctx, tname)
 	if err != nil {
@@ -151,7 +172,7 @@ func CreateNewTeam(ctx context.Context, tname *string, uid int64) (string, error
 		return "", err
 	}
 
-	err = UpdateTeamIDByUserID(ctx, uid, tid)
+	err = trans.WithContext(ctx).Table(TableUserInfo).Where("user_id = ?", uid).Update("belong_team", tid).Error
 	if err != nil {
 		trans.WithContext(ctx).Rollback()
 		DelTeamName(ctx, tname)
@@ -191,7 +212,9 @@ func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*TeamInfo, error) {
 	}
 
 	teamInfo := new(TeamInfo)
+	teamInfo.TeamID = tid
 	teamInfo.TeamName = rec[0].TeamName
+	teamInfo.MemberCnt = rec[0].MemberCnt
 	teamInfo.TeamAccount = rec[0].TeamAccount
 	teamInfo.TeamPassword = rec[0].TeamPassword
 	teamInfo.InviteToken = inviteToken
@@ -248,4 +271,47 @@ func ModifyTeamInfoByTeamID(ctx context.Context, tid int64, tname *string) error
 		return err
 	}
 	return nil
+}
+
+func UserJoinTeam(ctx context.Context, uid int64, tid int64) (bool, error) {
+	trans := config.RDB.Begin()
+	ori := map[string]interface{}{}
+	result := trans.WithContext(ctx).Table(TableTeamInfo).Select("member_cnt").Where("team_id = ?", tid).Find(&ori)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return false, errors.New("no team record")
+	}
+	if result.RowsAffected > 1 {
+		return false, errors.New("duplicate team_id but why???")
+	}
+
+	nowCnt := ori["member_cnt"].(int32)
+	if nowCnt >= config.MaxTeamMember {
+		return false, nil
+	}
+	if nowCnt < 1 {
+		return false, errors.New("the member cnt is less than 1 but why???")
+	}
+
+	nowCnt++
+
+	err := trans.WithContext(ctx).Table(TableTeamInfo).Where("team_id = ?", tid).Update("member_cnt", nowCnt).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return false, err
+	}
+
+	err = trans.WithContext(ctx).Table(TableUserInfo).Where("user_id = ?", uid).Update("belong_team", tid).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return false, err
+	}
+
+	if err := trans.Commit().Error; err != nil {
+		log.Println("[ERROR] UserJoinTeam(): transaction failed")
+		return false, err
+	}
+	return true, nil
 }

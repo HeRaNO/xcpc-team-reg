@@ -190,22 +190,6 @@ func ModifyUserInfoByID(ctx context.Context, uid int64, usrinfo *UserInfoModify)
 	return nil
 }
 
-func UpdateTeamIDByUserID(ctx context.Context, uid int64, tid int64) error {
-	trans := config.RDB.Begin()
-
-	err := trans.WithContext(ctx).Table(TableUserInfo).Where("user_id = ?", uid).Update("belong_team", tid).Error
-	if err != nil {
-		trans.WithContext(ctx).Rollback()
-		return err
-	}
-
-	if err := trans.Commit().Error; err != nil {
-		log.Println("[ERROR] UpdateTeamIDByUserID(): transaction failed")
-		return err
-	}
-	return nil
-}
-
 func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
 	rdb := config.RDB
 

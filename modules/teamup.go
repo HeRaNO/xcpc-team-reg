@@ -79,8 +79,58 @@ func JoinTeam(w http.ResponseWriter, r *http.Request) {
 	// if user.team_id != 0 -> failed, has joined a team
 	// Fetch team status from RDB
 	// failed -> failed, not exist
-	// If mem_cnt > 3 -> failed, cannot join
+	// If mem_cnt >= 3 -> failed, cannot join
 	// user.team_id <- team_id, team.mem_cnt++
+
+	uid := getUserIDFromReq(r)
+	tid, err := model.GetTeamIDByUserID(r.Context(), uid)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if tid != 0 {
+		util.ErrorResponse(w, r, "user has already joined in a team", config.ERR_WRONGINFO)
+		return
+	}
+
+	defer r.Body.Close()
+	bd, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	teamInfo := model.JoinTeamRequest{}
+	err = jsoniter.Unmarshal(bd, &teamInfo)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	joinTeamID := teamInfo.TeamID
+	joinTeamToken := teamInfo.InviteToken
+
+	isValidToken, err := model.ValidateTeamInviteToken(r.Context(), joinTeamID, &joinTeamToken)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if !isValidToken {
+		util.ErrorResponse(w, r, "invalid invite token or team id", config.ERR_WRONGINFO)
+		return
+	}
+
+	joined, err := model.UserJoinTeam(r.Context(), uid, joinTeamID)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if !joined {
+		util.ErrorResponse(w, r, "cannot join in the team", config.ERR_WRONGINFO)
+		return
+	}
+
+	util.SuccessResponse(w, r, "ok")
 }
 
 // User quit a team

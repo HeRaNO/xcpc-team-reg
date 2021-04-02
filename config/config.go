@@ -47,7 +47,7 @@ type SrvConfig struct {
 }
 
 type ConstConfig struct {
-	MaxTeamMember     int      `yaml:"MaxTeamMember"`
+	MaxTeamMember     int32    `yaml:"MaxTeamMember"`
 	MaxTeamNameLength int      `yaml:"MaxTeamNameLength"`
 	UserTokenLength   int      `yaml:"UserTokenLength"`
 	ValidStuIDLength  []int    `yaml:"ValidStuIDLength"`

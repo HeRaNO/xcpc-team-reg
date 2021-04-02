@@ -8,7 +8,8 @@ import (
 
 var SchoolMap map[int]string
 var StuIDMap map[int]bool
-var MaxTeamNameLength, UserTokenLength, MaxTeamMember int
+var MaxTeamNameLength, UserTokenLength int
+var MaxTeamMember int32
 
 const (
 	LOGIN_EXPIRETIME      = 24 * time.Hour
