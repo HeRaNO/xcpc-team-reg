@@ -206,7 +206,7 @@ func UpdateTeamIDByUserID(ctx context.Context, uid int64, tid int64) error {
 	return nil
 }
 
-func GetUserInfoByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
+func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
 	rdb := config.RDB
 
 	rec := make([]User, 0)

@@ -14,7 +14,7 @@ Redis:
 Server:
   Port: 12345
   SMTPAddr: ""
-  SMTPPort: 
+  SMTPPort: 465
   EmailSign: ""
   EmailAlias: ""
   EmailAddr: ""
@@ -31,6 +31,7 @@ Server:
     changeemail: "邮箱验证邮件 - 更改邮箱"
     reset: "邮箱验证邮件 - 重置密码"
 Const:
+  MaxTeamMember: 3 # In XCPC contest
   MaxTeamNameLength: 25
   UserTokenLength: 8 # The length of token in email verification and join in a team
   ValidStuIDLength: [13] # Just an example

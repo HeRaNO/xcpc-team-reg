@@ -24,6 +24,7 @@ type TeamInfo struct {
 	TeamName     string     `json:"teamname"`
 	TeamAccount  string     `json:"account"`
 	TeamPassword string     `json:"password"`
+	InviteToken  string     `json:"invite_token"`
 	TeamMember   []UserInfo `json:"member"`
 }
 
@@ -184,16 +185,67 @@ func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*TeamInfo, error) {
 		return nil, errors.New("duplicate team_id but why???")
 	}
 
+	inviteToken, err := GetTeamInviteToken(ctx, tid)
+	if err != nil {
+		return nil, err
+	}
+
 	teamInfo := new(TeamInfo)
 	teamInfo.TeamName = rec[0].TeamName
 	teamInfo.TeamAccount = rec[0].TeamAccount
 	teamInfo.TeamPassword = rec[0].TeamPassword
+	teamInfo.InviteToken = inviteToken
 
-	usrInfo, err := GetUserInfoByTeamID(ctx, tid)
+	usrInfo, err := GetUserInfosByTeamID(ctx, tid)
 	if err != nil {
 		return nil, err
 	}
 
 	teamInfo.TeamMember = usrInfo
 	return teamInfo, nil
+}
+
+func ModifyTeamInfoByTeamID(ctx context.Context, tid int64, tname *string) error {
+	trans := config.RDB.Begin()
+	ori := map[string]interface{}{}
+	result := trans.WithContext(ctx).Table(TableTeamInfo).Select("team_name").Where("team_id = ?", tid).Find(&ori)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("no team record")
+	}
+	if result.RowsAffected > 1 {
+		return errors.New("duplicate team_id but why???")
+	}
+
+	err := trans.WithContext(ctx).Table(TableTeamInfo).Where("team_id = ?", tid).Update("team_name", *tname).Error
+
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+
+	oriTeamName := ori["team_name"].(string)
+
+	err = DelTeamName(ctx, &oriTeamName)
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+
+	err = AddTeamName(ctx, tname)
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		AddTeamName(ctx, &oriTeamName)
+		return err
+	}
+
+	if err := trans.Commit().Error; err != nil {
+		log.Println("[ERROR] ModifyTeamInfoByTeamID(): transaction failed")
+		DelTeamName(ctx, tname)
+		AddTeamName(ctx, &oriTeamName)
+		return err
+	}
+	return nil
 }
