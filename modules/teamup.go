@@ -142,4 +142,23 @@ func QuitTeam(w http.ResponseWriter, r *http.Request) {
 	// user.team_id <- 0
 	// team.mem_cnt = 1 -> delete the team record
 	// else team.mem_cnt--
+
+	uid := getUserIDFromReq(r)
+	tid, err := model.GetTeamIDByUserID(r.Context(), uid)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if tid == 0 {
+		util.ErrorResponse(w, r, "user hasn't joined in a team", config.ERR_WRONGINFO)
+		return
+	}
+
+	err = model.UserQuitTeam(r.Context(), uid, tid)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
+	util.SuccessResponse(w, r, "ok")
 }

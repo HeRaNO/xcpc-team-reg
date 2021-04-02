@@ -315,3 +315,73 @@ func UserJoinTeam(ctx context.Context, uid int64, tid int64) (bool, error) {
 	}
 	return true, nil
 }
+
+func UserQuitTeam(ctx context.Context, uid int64, tid int64) error {
+	trans := config.RDB.Begin()
+	ori := make([]Team, 0)
+	result := trans.WithContext(ctx).Table(TableTeamInfo).Where("team_id = ?", tid).Find(&ori)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("no team record")
+	}
+	if result.RowsAffected > 1 {
+		return errors.New("duplicate team_id but why???")
+	}
+
+	team := ori[0]
+	nowCnt := team.MemberCnt
+
+	nowCnt--
+
+	err := trans.WithContext(ctx).Table(TableTeamInfo).Where("team_id = ?", tid).Update("member_cnt", nowCnt).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+
+	if nowCnt < 1 {
+		trans.WithContext(ctx).Table(TableTeamInfo).Where("team_id = ?", tid).Delete(&Team{})
+		if err != nil {
+			trans.WithContext(ctx).Rollback()
+			return err
+		}
+	}
+
+	err = trans.WithContext(ctx).Table(TableUserInfo).Where("user_id = ?", uid).Update("belong_team", 0).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+
+	inviteToken := ""
+	if nowCnt < 1 {
+		err := DelTeamName(ctx, &team.TeamName)
+		if err != nil {
+			trans.WithContext(ctx).Rollback()
+			return err
+		}
+		inviteToken, err = GetTeamInviteToken(ctx, tid)
+		if err != nil {
+			trans.WithContext(ctx).Rollback()
+			return err
+		}
+		err = DelTeamInviteToken(ctx, tid)
+		if err != nil {
+			trans.WithContext(ctx).Rollback()
+			AddTeamName(ctx, &team.TeamName)
+			return err
+		}
+	}
+
+	if err := trans.Commit().Error; err != nil {
+		log.Println("[ERROR] UserJoinTeam(): transaction failed")
+		if nowCnt < 1 {
+			AddTeamName(ctx, &team.TeamName)
+			SetTeamInviteToken(ctx, tid, &inviteToken)
+		}
+		return err
+	}
+	return nil
+}
