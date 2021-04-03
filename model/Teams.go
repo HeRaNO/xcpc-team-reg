@@ -145,10 +145,10 @@ func ValidateTeamInviteToken(ctx context.Context, tid int64, token *string) (boo
 	return true, nil
 }
 
-func CreateNewTeam(ctx context.Context, tname *string, uid int64) (string, error) {
+func CreateNewTeam(ctx context.Context, tname *string, uid int64) (int64, string, error) {
 	err := AddTeamName(ctx, tname)
 	if err != nil {
-		return "", err
+		return -1, "", err
 	}
 
 	trans := config.RDB.Begin()
@@ -160,7 +160,7 @@ func CreateNewTeam(ctx context.Context, tname *string, uid int64) (string, error
 	if err != nil {
 		DelTeamName(ctx, tname)
 		trans.WithContext(ctx).Rollback()
-		return "", err
+		return -1, "", err
 	}
 
 	tid := info.TeamID
@@ -169,24 +169,24 @@ func CreateNewTeam(ctx context.Context, tname *string, uid int64) (string, error
 	if err != nil {
 		trans.WithContext(ctx).Rollback()
 		DelTeamName(ctx, tname)
-		return "", err
+		return -1, "", err
 	}
 
 	err = trans.WithContext(ctx).Table(TableUserInfo).Where("user_id = ?", uid).Update("belong_team", tid).Error
 	if err != nil {
 		trans.WithContext(ctx).Rollback()
 		DelTeamName(ctx, tname)
-		return "", err
+		return -1, "", err
 	}
 
 	if err := trans.Commit().Error; err != nil {
 		log.Println("[ERROR] CreateNewTeam(): transaction failed")
 		DelTeamInviteToken(ctx, tid)
 		DelTeamName(ctx, tname)
-		return "", err
+		return -1, "", err
 	}
 
-	return inviteToken, nil
+	return tid, inviteToken, nil
 }
 
 func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*TeamInfo, error) {
@@ -381,6 +381,46 @@ func UserQuitTeam(ctx context.Context, uid int64, tid int64) error {
 			AddTeamName(ctx, &team.TeamName)
 			SetTeamInviteToken(ctx, tid, &inviteToken)
 		}
+		return err
+	}
+	return nil
+}
+
+func GetAllTeamIDs(ctx context.Context) ([]int64, error) {
+	rdb := config.RDB
+
+	rec := make([]int64, 0)
+	result := rdb.WithContext(ctx).Table(TableTeamInfo).Select("team_id").Scan(&rec)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return rec, nil
+}
+
+func SetTeamAccPwdByID(ctx context.Context, tid int64, acc *string, pwd *string) error {
+	trans := config.RDB.Begin()
+	accPwd := &Team{
+		TeamAccount:  *acc,
+		TeamPassword: *pwd,
+	}
+	result := trans.WithContext(ctx).Table(TableTeamInfo).Where("team_id = ?", tid).Updates(accPwd)
+	row, err := result.RowsAffected, result.Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return err
+	}
+	if row < 1 {
+		trans.WithContext(ctx).Rollback()
+		return errors.New("no team record found")
+	}
+	if row > 1 {
+		trans.WithContext(ctx).Rollback()
+		return errors.New("duplicate team_id but why???")
+	}
+	if err := trans.Commit().Error; err != nil {
+		log.Println("[ERROR] SetTeamAccPwdByID: transaction failed")
 		return err
 	}
 	return nil

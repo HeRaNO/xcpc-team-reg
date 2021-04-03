@@ -32,6 +32,15 @@ func JSON(w http.ResponseWriter, r *http.Request, v interface{}) {
 	w.Write(buf.Bytes())
 }
 
+func File(w http.ResponseWriter, r *http.Request, v []byte) {
+	w.Header().Set("Content-Disposition", "attachment; filename=team_export.csv")
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if status, ok := r.Context().Value(StatusCtxKey).(int); ok {
+		w.WriteHeader(status)
+	}
+	w.Write(v)
+}
+
 func SuccessResponseWithTotal(w http.ResponseWriter, r *http.Request, data interface{}, total int) {
 	respData := R{
 		"code": "0",

@@ -64,13 +64,18 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	inviteToken, err := model.CreateNewTeam(r.Context(), &teamName, uid)
+	tid, inviteToken, err := model.CreateNewTeam(r.Context(), &teamName, uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
 	}
 
-	util.SuccessResponse(w, r, inviteToken)
+	teamInfoResp := model.JoinTeamRequest{
+		TeamID:      tid,
+		InviteToken: inviteToken,
+	}
+
+	util.SuccessResponse(w, r, teamInfoResp)
 }
 
 // User join in a team

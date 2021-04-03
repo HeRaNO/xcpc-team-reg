@@ -59,7 +59,7 @@ func adminRouter() http.Handler {
 
 	r.Get("/adminHello", modules.SayHelloAdmin)
 
-	r.Post("/export", modules.ExportTeamInfo)
+	r.Get("/export", modules.ExportTeamInfo)
 	r.Post("/createContest", modules.CreateContest)
 	r.Post("/import", modules.ImportTeamInfo)
 

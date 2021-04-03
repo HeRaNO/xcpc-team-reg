@@ -10,6 +10,7 @@ var SchoolMap map[int]string
 var StuIDMap map[int]bool
 var MaxTeamNameLength, UserTokenLength int
 var MaxTeamMember int32
+var MaxUploadSize int64
 
 const (
 	LOGIN_EXPIRETIME      = 24 * time.Hour
@@ -34,5 +35,6 @@ func initConst(wg *sync.WaitGroup) {
 	}
 	MaxTeamMember = config.MaxTeamMember
 	MaxTeamNameLength, UserTokenLength = config.MaxTeamNameLength, config.UserTokenLength
+	MaxUploadSize = 2 << 20
 	log.Println("[INFO] init const finished successfully")
 }
