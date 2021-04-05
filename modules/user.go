@@ -15,8 +15,12 @@ func GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	// return info
 
 	uid := getUserIDFromReq(r)
-	info, err := model.GetUserInfoByID(r.Context(), uid)
+	if uid <= 0 {
+		util.ErrorResponse(w, r, "user status error", config.ERR_UNAUTHORIZED)
+		return
+	}
 
+	info, err := model.GetUserInfoByID(r.Context(), uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
@@ -32,8 +36,8 @@ func GetUserInfo(w http.ResponseWriter, r *http.Request) {
 func ModifyUserInfo(w http.ResponseWriter, r *http.Request) {
 	// validate info
 	// write to RDB
-	defer r.Body.Close()
 
+	defer r.Body.Close()
 	bd, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
@@ -53,6 +57,11 @@ func ModifyUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uid := getUserIDFromReq(r)
+	if uid <= 0 {
+		util.ErrorResponse(w, r, "user status error", config.ERR_UNAUTHORIZED)
+		return
+	}
+
 	err = model.ModifyUserInfoByID(r.Context(), uid, &usrinfo)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)

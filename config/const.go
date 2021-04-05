@@ -6,11 +6,30 @@ import (
 	"time"
 )
 
+const (
+	FingerPrintTokenLength = 20
+	JWTIDName              = "id"
+	JWTAdminName           = "ro"
+	JWTFingerPrintName     = "_f"
+)
+
+type CtxUserInfo struct {
+	ID    int64
+	Admin bool
+}
+
+type CtxName string
+
+const (
+	CtxUserInfoName CtxName = "user"
+	MaxUploadSize   int64   = 2 << 20
+)
+
 var SchoolMap map[int]string
 var StuIDMap map[int]bool
 var MaxTeamNameLength, UserTokenLength int
 var MaxTeamMember int32
-var MaxUploadSize int64
+var JWTSecret []byte
 
 const (
 	LOGIN_EXPIRETIME      = 24 * time.Hour
@@ -35,6 +54,6 @@ func initConst(wg *sync.WaitGroup) {
 	}
 	MaxTeamMember = config.MaxTeamMember
 	MaxTeamNameLength, UserTokenLength = config.MaxTeamNameLength, config.UserTokenLength
-	MaxUploadSize = 2 << 20
+	JWTSecret = []byte(config.JWTSecret)
 	log.Println("[INFO] init const finished successfully")
 }

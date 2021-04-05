@@ -34,6 +34,7 @@ Const:
   MaxTeamMember: 3 # In XCPC contest
   MaxTeamNameLength: 25
   UserTokenLength: 8 # The length of token in email verification and join in a team
+  JWTSecret: "" # Secret uses in JWT. MUST BE STRONG ENOUGH!!!
   ValidStuIDLength: [13] # Just an example
   SchoolName: # Should be identical to the offical website
     - "School 1" # Just an example

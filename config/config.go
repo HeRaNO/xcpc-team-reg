@@ -50,6 +50,7 @@ type ConstConfig struct {
 	MaxTeamMember     int32    `yaml:"MaxTeamMember"`
 	MaxTeamNameLength int      `yaml:"MaxTeamNameLength"`
 	UserTokenLength   int      `yaml:"UserTokenLength"`
+	JWTSecret         string   `yaml:"JWTSecret"`
 	ValidStuIDLength  []int    `yaml:"ValidStuIDLength"`
 	SchoolName        []string `yaml:"SchoolName"`
 }

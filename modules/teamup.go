@@ -19,6 +19,11 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 	// user.team_id <- team_id
 
 	uid := getUserIDFromReq(r)
+	if uid <= 0 {
+		util.ErrorResponse(w, r, "user status error", config.ERR_UNAUTHORIZED)
+		return
+	}
+
 	tid, err := model.GetTeamIDByUserID(r.Context(), uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
@@ -88,6 +93,11 @@ func JoinTeam(w http.ResponseWriter, r *http.Request) {
 	// user.team_id <- team_id, team.mem_cnt++
 
 	uid := getUserIDFromReq(r)
+	if uid <= 0 {
+		util.ErrorResponse(w, r, "user status error", config.ERR_UNAUTHORIZED)
+		return
+	}
+
 	tid, err := model.GetTeamIDByUserID(r.Context(), uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
@@ -149,6 +159,11 @@ func QuitTeam(w http.ResponseWriter, r *http.Request) {
 	// else team.mem_cnt--
 
 	uid := getUserIDFromReq(r)
+	if uid <= 0 {
+		util.ErrorResponse(w, r, "user status error", config.ERR_UNAUTHORIZED)
+		return
+	}
+
 	tid, err := model.GetTeamIDByUserID(r.Context(), uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)

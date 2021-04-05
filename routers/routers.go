@@ -46,7 +46,7 @@ func InitRouters() http.Handler {
 			r.Post("/joinTeam", modules.JoinTeam)
 			r.Post("/quitTeam", modules.QuitTeam)
 
-			r.Get("/logout", modules.Logout)
+			r.Post("/logout", modules.Logout)
 		})
 	})
 

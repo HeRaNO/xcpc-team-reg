@@ -1,6 +1,8 @@
 package util
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"math/rand"
 	"time"
 )
@@ -31,4 +33,9 @@ func GenToken(n int) string {
 		left--
 	}
 	return string(b)
+}
+
+func SHA256(msg []byte) string {
+	h := sha256.Sum256(msg)
+	return hex.EncodeToString(h[:])
 }

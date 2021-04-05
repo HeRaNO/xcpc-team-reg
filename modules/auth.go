@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -14,13 +15,20 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 )
 
-func generateJWTToken(uid int64, jwtSecret *string) (string, error) {
+func generateJWTToken(nowTime time.Time, uid int64, isAdmin bool, userFingerPrint *string) (string, error) {
 	t := jwt.New()
-	t.Set(jwt.IssuedAtKey, time.Now().Unix())
-	t.Set(jwt.ExpirationKey, time.Now().Add(config.LOGIN_EXPIRETIME).Unix())
-	idToken := strconv.FormatInt(uid, 10)
-	t.Set("id", idToken)
-	tokenByte, err := jwt.Sign(t, jwa.HS256, []byte(*jwtSecret))
+	t.Set(jwt.IssuedAtKey, nowTime.Unix())
+	t.Set(jwt.ExpirationKey, nowTime.Add(config.LOGIN_EXPIRETIME).Unix())
+	uidToken := strconv.FormatInt(uid, 10)
+	t.Set(config.JWTIDName, uidToken)
+	admin := "0"
+	if isAdmin {
+		admin = "1"
+	}
+	t.Set(config.JWTAdminName, admin)
+	fgp := util.SHA256([]byte(*userFingerPrint))
+	t.Set(config.JWTFingerPrintName, fgp)
+	tokenByte, err := jwt.Sign(t, jwa.HS256, config.JWTSecret)
 	if err != nil {
 		return "", err
 	}
@@ -29,19 +37,8 @@ func generateJWTToken(uid int64, jwtSecret *string) (string, error) {
 
 // Must insure it can get user_id from request
 func getUserIDFromReq(r *http.Request) int64 {
-	token, _ := r.Cookie("jwt")
-	jwtToken := token.Value
-	t, _ := jwt.Parse([]byte(jwtToken))
-	id, _ := t.Get("id")
-	uid, _ := strconv.ParseInt(id.(string), 10, 64)
-	return uid
-}
-
-// Must insure it can get jwt from cookies
-func getJWTFromReq(r *http.Request) string {
-	token, _ := r.Cookie("jwt")
-	jwtToken := token.Value
-	return jwtToken
+	userInfo := r.Context().Value(config.CtxUserInfoName).(*config.CtxUserInfo)
+	return userInfo.ID
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +55,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uid, err := model.GetUserIDByEmail(r.Context(), &info.Email)
-
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
@@ -74,45 +70,44 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretToken := util.GenToken(20)
-	err = model.SetUserJWTSecret(r.Context(), uid, &secretToken)
+	isAdmin, err := model.GetAdminByUserID(r.Context(), uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
 	}
 
-	jwtToken, err := generateJWTToken(uid, &secretToken)
+	fingerPrintToken := util.GenToken(config.FingerPrintTokenLength)
+	nowTime := time.Now()
+	secretToken := fmt.Sprintf("%d_%d_%s", nowTime.Unix(), uid, fingerPrintToken)
+
+	jwtToken, err := generateJWTToken(nowTime, uid, isAdmin, &secretToken)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
 	}
 
-	jwtCookie := http.Cookie{
-		Name:     "jwt",
-		Value:    jwtToken,
-		Expires:  time.Now().Add(config.LOGIN_EXPIRETIME),
+	fgpCookie := http.Cookie{
+		Name:     config.JWTFingerPrintName,
+		Value:    secretToken,
+		Expires:  nowTime.Add(config.LOGIN_EXPIRETIME),
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	}
 
-	http.SetCookie(w, &jwtCookie)
-	util.SuccessResponse(w, r, "ok")
+	http.SetCookie(w, &fgpCookie)
+	util.SuccessResponse(w, r, jwtToken)
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
 	uid := getUserIDFromReq(r)
-	err := model.DelUserJWTSecret(r.Context(), uid)
-	if err != nil {
-		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+	if uid <= 0 {
+		util.ErrorResponse(w, r, "user status error", config.ERR_UNAUTHORIZED)
 		return
 	}
 
-	jwtCookie := http.Cookie{
-		Name:     "jwt",
-		Value:    getJWTFromReq(r),
-		HttpOnly: true,
-		MaxAge:   -1,
-	}
+	fgpCookie, _ := r.Cookie(config.JWTFingerPrintName)
+	fgpCookie.MaxAge = -1
 
-	http.SetCookie(w, &jwtCookie)
+	http.SetCookie(w, fgpCookie)
 	util.SuccessResponse(w, r, "ok")
 }

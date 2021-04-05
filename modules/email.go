@@ -95,5 +95,5 @@ func SendValidationEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	util.SuccessResponse(w, r, "email token sended")
+	util.SuccessResponse(w, r, "ok")
 }

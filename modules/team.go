@@ -15,6 +15,11 @@ func GetTeamInfo(w http.ResponseWriter, r *http.Request) {
 	// Fetch from RDB
 	// return info
 	uid := getUserIDFromReq(r)
+	if uid <= 0 {
+		util.ErrorResponse(w, r, "user status error", config.ERR_UNAUTHORIZED)
+		return
+	}
+
 	tid, err := model.GetTeamIDByUserID(r.Context(), uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
@@ -24,6 +29,7 @@ func GetTeamInfo(w http.ResponseWriter, r *http.Request) {
 		util.ErrorResponse(w, r, "user hasn't joined a team", config.ERR_WRONGINFO)
 		return
 	}
+
 	info, err := model.GetTeamInfoByTeamID(r.Context(), tid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
@@ -38,6 +44,11 @@ func ModifyTeamInfo(w http.ResponseWriter, r *http.Request) {
 	// write to RDB
 
 	uid := getUserIDFromReq(r)
+	if uid <= 0 {
+		util.ErrorResponse(w, r, "user status error", config.ERR_UNAUTHORIZED)
+		return
+	}
+
 	tid, err := model.GetTeamIDByUserID(r.Context(), uid)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
@@ -49,7 +60,6 @@ func ModifyTeamInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer r.Body.Close()
-
 	bd, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)

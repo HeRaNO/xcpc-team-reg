@@ -41,11 +41,6 @@ func MakeEmailUserIDKey(email *string) string {
 	return ret
 }
 
-func MakeUserJWTSecretKey(uid int64) string {
-	ret := fmt.Sprintf("JWTSECRET:%d", uid)
-	return ret
-}
-
 func MakeEmailRequestKey(email *string) string {
 	ret := fmt.Sprintf("EMAILREQ:%s", *email)
 	return ret
@@ -123,39 +118,6 @@ func DelEmailUserID(ctx context.Context, email *string) error {
 	err := config.RedisClient.Del(ctx, key).Err()
 	if err != nil {
 		log.Println("[ERROR] DelEmailUserID(): redis del error")
-		return err
-	}
-	return nil
-}
-
-func GetUserJWTSecret(ctx context.Context, uid int64) (string, error) {
-	key := MakeUserJWTSecretKey(uid)
-	ret, err := config.RedisClient.Get(ctx, key).Result()
-	if err == redis.Nil {
-		log.Printf("[INFO] GetUserJWTSecret(): key is nil, user_id: %d\n", uid)
-		return "", nil
-	} else if err != nil {
-		log.Println("[ERROR] GetUserJWTSecret(): redis query error")
-		return "", err
-	}
-	return ret, nil
-}
-
-func SetUserJWTSecret(ctx context.Context, uid int64, token *string) error {
-	key := MakeUserJWTSecretKey(uid)
-	err := config.RedisClient.SetEX(ctx, key, *token, config.LOGIN_EXPIRETIME).Err()
-	if err != nil {
-		log.Println("[ERROR] SetUserJWTSecret(): redis set error")
-		return err
-	}
-	return nil
-}
-
-func DelUserJWTSecret(ctx context.Context, uid int64) error {
-	key := MakeUserJWTSecretKey(uid)
-	err := config.RedisClient.Del(ctx, key).Err()
-	if err != nil {
-		log.Println("[ERROR] DelUserJWTSecret(): redis del error")
 		return err
 	}
 	return nil
