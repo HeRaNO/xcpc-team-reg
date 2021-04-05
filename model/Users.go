@@ -22,13 +22,6 @@ type UserRegister struct {
 	Action     string `json:"action"`
 }
 
-type UserResetPwd struct {
-	Email      string `json:"email"`
-	EmailToken string `json:"email_token"`
-	PwdToken   string `json:"pwd_token"`
-	Action     string `json:"action"`
-}
-
 type UserInfo struct {
 	Name       string `json:"name"`
 	School     string `json:"school"`

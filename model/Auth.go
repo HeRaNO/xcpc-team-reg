@@ -31,6 +31,13 @@ type UserLogin struct {
 	PwdToken string `json:"pwd"`
 }
 
+type UserResetPwd struct {
+	Email      string `json:"email"`
+	EmailToken string `json:"email_token"`
+	PwdToken   string `json:"pwd_token"`
+	Action     string `json:"action"`
+}
+
 func MakeEmailTokenKey(email *string) string {
 	ret := fmt.Sprintf("EMAILTOKEN:%s", *email)
 	return ret
