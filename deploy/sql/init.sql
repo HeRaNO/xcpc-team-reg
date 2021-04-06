@@ -28,11 +28,3 @@ CREATE TABLE t_team (
     team_account  VARCHAR(20),
     team_password VARCHAR(20)
 );
-
-CREATE TABLE t_contest (
-    contest_id   BIGSERIAL PRIMARY KEY,
-    contest_name VARCHAR(50),
-    start_time   BIGINT,
-    end_time     BIGINT,
-    note         TEXT
-);
