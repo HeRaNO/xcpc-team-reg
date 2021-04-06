@@ -11,10 +11,11 @@ import (
 var conf *Configure
 
 type Configure struct {
-	RDB   *RDBConfig   `yaml:"RDB"`
-	Redis *RedisConfig `yaml:"Redis"`
-	Srv   *SrvConfig   `yaml:"Server"`
-	Const *ConstConfig `yaml:"Const"`
+	RDB     *RDBConfig     `yaml:"RDB"`
+	Redis   *RedisConfig   `yaml:"Redis"`
+	Srv     *SrvConfig     `yaml:"Server"`
+	Contest *ContestConfig `yaml:"Contest"`
+	Const   *ConstConfig   `yaml:"Const"`
 }
 
 type RDBConfig struct {
@@ -44,6 +45,13 @@ type SrvConfig struct {
 	EmailAlias    string            `yaml:"EmailAlias"`
 	EmailAction   map[string]string `yaml:"EmailAction"`
 	EmailSubject  map[string]string `yaml:"EmailSubject"`
+}
+
+type ContestConfig struct {
+	Name      string `yaml:"Name"`
+	StartTime string `yaml:"StartTime"`
+	EndTime   string `yaml:"EndTime"`
+	Note      string `yaml:"Note"`
 }
 
 type ConstConfig struct {
@@ -77,6 +85,8 @@ func InitConfig(file *string) {
 	go initConst(&wg)
 	wg.Add(1)
 	go initServer(&wg)
+	wg.Add(1)
+	go initContest(&wg)
 	initRedis()
 
 	wg.Wait()

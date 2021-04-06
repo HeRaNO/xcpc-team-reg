@@ -30,6 +30,11 @@ Server:
     changepwd: "邮箱验证邮件 - 更改密码"
     changeemail: "邮箱验证邮件 - 更改邮箱"
     reset: "邮箱验证邮件 - 重置密码"
+Contest:
+  Name: "" # Contest name
+  StartTime: "2021-04-06 12:00:00" # Registration start time
+  EndTime: "2021-04-06 18:00:00" # Registration end time
+  Note: "" # Contest note
 Const:
   MaxTeamMember: 3 # In XCPC contest
   MaxTeamNameLength: 25

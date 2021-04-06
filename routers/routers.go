@@ -23,6 +23,7 @@ func InitRouters() http.Handler {
 		r.Get("/getSchool", modules.GetSchool)
 		r.Post("/register", modules.Register)
 		r.Post("/verifyEmail", modules.SendValidationEmail)
+		r.Get("/getContestInfo", modules.GetContestInfo)
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.CheckUnauthorized)
@@ -39,12 +40,15 @@ func InitRouters() http.Handler {
 			r.Get("/getUserInfo", modules.GetUserInfo)
 			r.Get("/getTeamInfo", modules.GetTeamInfo)
 
-			r.Post("/modifyUserInfo", modules.ModifyUserInfo)
-			r.Post("/modifyTeamInfo", modules.ModifyTeamInfo)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.CheckTime)
+				r.Post("/modifyUserInfo", modules.ModifyUserInfo)
+				r.Post("/modifyTeamInfo", modules.ModifyTeamInfo)
 
-			r.Post("/createTeam", modules.CreateTeam)
-			r.Post("/joinTeam", modules.JoinTeam)
-			r.Post("/quitTeam", modules.QuitTeam)
+				r.Post("/createTeam", modules.CreateTeam)
+				r.Post("/joinTeam", modules.JoinTeam)
+				r.Post("/quitTeam", modules.QuitTeam)
+			})
 
 			r.Post("/logout", modules.Logout)
 		})
@@ -60,8 +64,6 @@ func adminRouter() http.Handler {
 	r.Get("/adminHello", modules.SayHelloAdmin)
 
 	r.Get("/export", modules.ExportTeamInfo)
-	r.Post("/createContest", modules.CreateContest)
 	r.Post("/import", modules.ImportTeamInfo)
-
 	return r
 }
