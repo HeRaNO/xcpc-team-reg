@@ -7,10 +7,16 @@ import (
 	"github.com/HeRaNO/xcpc-team-reg/util"
 )
 
-func GetSchool(w http.ResponseWriter, r *http.Request) {
+func GetIDSchool(w http.ResponseWriter, r *http.Request) {
 	// return SchoolMap in JSON
 
-	util.SuccessResponseWithTotal(w, r, config.SchoolMap, len(config.SchoolMap))
+	util.SuccessResponseWithTotal(w, r, config.IDSchoolMap, len(config.IDSchoolMap))
+}
+
+func GetSchoolID(w http.ResponseWriter, r *http.Request) {
+	// return SchoolMap in JSON
+
+	util.SuccessResponseWithTotal(w, r, config.SchoolIDMap, len(config.SchoolIDMap))
 }
 
 func SayHello(w http.ResponseWriter, r *http.Request) {

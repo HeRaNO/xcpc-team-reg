@@ -25,7 +25,8 @@ const (
 	MaxUploadSize   int64   = 2 << 20
 )
 
-var SchoolMap map[int]string
+var SchoolIDMap map[string]int
+var IDSchoolMap map[int]string
 var StuIDMap map[int]bool
 var MaxTeamNameLength, UserTokenLength int
 var MaxTeamMember int32
@@ -44,10 +45,12 @@ func initConst(wg *sync.WaitGroup) {
 	if config == nil {
 		panic("[FAILED] config file failed - RDB")
 	}
-	SchoolMap = make(map[int]string)
+	SchoolIDMap = make(map[string]int)
+	IDSchoolMap = make(map[int]string)
 	StuIDMap = make(map[int]bool)
 	for i, schoolName := range config.SchoolName {
-		SchoolMap[i+1] = schoolName
+		IDSchoolMap[i+1] = schoolName
+		SchoolIDMap[schoolName] = i+1
 	}
 	for _, stuIDLength := range config.ValidStuIDLength {
 		StuIDMap[stuIDLength] = true

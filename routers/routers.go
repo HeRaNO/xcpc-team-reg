@@ -20,7 +20,8 @@ func InitRouters() http.Handler {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/", modules.SayHello)
-		r.Get("/getSchool", modules.GetSchool)
+		r.Get("/getIDSchool", modules.GetIDSchool)
+		r.Get("/getSchoolID", modules.GetSchoolID)
 		r.Post("/register", modules.Register)
 		r.Post("/verifyEmail", modules.SendValidationEmail)
 		r.Get("/getContestInfo", modules.GetContestInfo)

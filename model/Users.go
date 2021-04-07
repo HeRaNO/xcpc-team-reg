@@ -98,7 +98,7 @@ func GetUserInfoByID(ctx context.Context, uid int64) (*UserInfo, error) {
 
 	usrSchool := "undefined"
 
-	if school, ok := config.SchoolMap[rec[0].School]; ok {
+	if school, ok := config.IDSchoolMap[rec[0].School]; ok {
 		usrSchool = school
 	}
 
@@ -206,7 +206,7 @@ func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
 	for _, usr := range rec {
 		usrSchool := "undefined"
 
-		if school, ok := config.SchoolMap[usr.School]; ok {
+		if school, ok := config.IDSchoolMap[usr.School]; ok {
 			usrSchool = school
 		}
 		info := UserInfo{
