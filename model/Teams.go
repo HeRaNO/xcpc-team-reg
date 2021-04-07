@@ -98,6 +98,22 @@ func DelTeamName(ctx context.Context, tname *string) error {
 	return nil
 }
 
+func GetTeamCount(ctx context.Context) (int64, error) {
+	redisLock := util.NewRedisMutex(config.RedisClient, TeamNameSetKey, 1, 200, 5)
+	redisLock.Lock(ctx)
+	if !redisLock.Lock(ctx) {
+		log.Printf("[ERROR] GetTeamCount(): get mutex lock failed\n")
+		return 0, errors.New("get mutex lock failed")
+	}
+	defer redisLock.Unlock(ctx)
+	cnt, err := config.RedisClient.SCard(ctx, TeamNameSetKey).Result()
+	if err != nil {
+		log.Println("[ERROR] GetTeamCount(): redis scard error")
+		return 0, err
+	}
+	return cnt, nil
+}
+
 func GetTeamInviteToken(ctx context.Context, tid int64) (string, error) {
 	key := MakeTeamInviteTokenKey(tid)
 	ret, err := config.RedisClient.Get(ctx, key).Result()
@@ -389,7 +405,8 @@ func UserQuitTeam(ctx context.Context, uid int64, tid int64) error {
 func GetAllTeamIDs(ctx context.Context) ([]int64, error) {
 	rdb := config.RDB
 
-	rec := make([]int64, 0)
+	cnt, _ := GetTeamCount(ctx)
+	rec := make([]int64, cnt)
 	result := rdb.WithContext(ctx).Table(TableTeamInfo).Select("team_id").Scan(&rec)
 
 	if result.Error != nil {

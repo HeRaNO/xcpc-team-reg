@@ -186,7 +186,7 @@ func ModifyUserInfoByID(ctx context.Context, uid int64, usrinfo *UserInfoModify)
 func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
 	rdb := config.RDB
 
-	rec := make([]User, 0)
+	rec := make([]User, config.MaxTeamMember)
 	result := rdb.Model(&User{}).Table(TableUserInfo).Where("belong_team = ?", tid).Find(&rec)
 
 	if result.Error != nil {
@@ -201,7 +201,7 @@ func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
 		return nil, errors.New("too many members in this team but why???")
 	}
 
-	usrInfo := make([]UserInfo, 0)
+	usrInfo := make([]UserInfo, config.MaxTeamMember)
 
 	for _, usr := range rec {
 		usrSchool := "undefined"
