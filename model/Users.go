@@ -197,7 +197,7 @@ func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
 		return nil, errors.New("no user in this team but why???")
 	}
 
-	if result.RowsAffected > 3 {
+	if result.RowsAffected > int64(config.MaxTeamMember) {
 		return nil, errors.New("too many members in this team but why???")
 	}
 
