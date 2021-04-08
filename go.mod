@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/go-chi/chi/v5 v5.0.2
+	github.com/go-chi/cors v1.2.0
 	github.com/go-redis/redis/v8 v8.8.0
 	github.com/goccy/go-json v0.4.9 // indirect
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect

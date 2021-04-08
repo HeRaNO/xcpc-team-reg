@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chi_middleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 func InitRouters() http.Handler {
@@ -17,6 +18,13 @@ func InitRouters() http.Handler {
 	r.Use(chi_middleware.RealIP)
 	r.Use(chi_middleware.Logger)
 	r.Use(chi_middleware.Recoverer)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/", modules.SayHello)
