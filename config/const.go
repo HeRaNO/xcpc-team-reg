@@ -43,7 +43,7 @@ func initConst(wg *sync.WaitGroup) {
 
 	config := conf.Const
 	if config == nil {
-		panic("[FAILED] config file failed - RDB")
+		panic("[FAILED] config file failed - Const")
 	}
 	SchoolIDMap = make(map[string]int)
 	IDSchoolMap = make(map[int]string)

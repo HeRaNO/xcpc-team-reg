@@ -15,7 +15,7 @@ func initContest(wg *sync.WaitGroup) {
 	var err error
 	config := conf.Contest
 	if config == nil {
-		panic("[FAILED] config file failed - RDB")
+		panic("[FAILED] config file failed - Contest")
 	}
 	ContestName, ContestNote = config.Name, config.Note
 	startTime := config.StartTime
