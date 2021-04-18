@@ -35,6 +35,7 @@ type RedisConfig struct {
 }
 
 type SrvConfig struct {
+	Domain        string            `yaml:"Domain"`
 	Port          int               `yaml:"Port"`
 	SMTPAddr      string            `yaml:"SMTPAddr"`
 	SMTPPort      int               `yaml:"SMTPPort"`

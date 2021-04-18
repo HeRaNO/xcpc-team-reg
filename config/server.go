@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-var ListenPort string
+var Domain, ListenPort string
 var SMTPAddr, SMTPHost string
 var SMTPPort int
 var EmailSign, EmailAddr, EmailPassword, EmailServer, EmailAlias, EmailFrom string
@@ -20,6 +20,7 @@ func initServer(wg *sync.WaitGroup) {
 		panic("[FAILED] config file error - Server")
 	}
 	config := conf.Srv
+	Domain = config.Domain
 	ListenPort = fmt.Sprintf(":%d", config.Port)
 	EmailSign, EmailAddr, EmailPassword = config.EmailSign, config.EmailAddr, config.EmailPassword
 	EmailServer, EmailAlias = config.EmailServer, config.EmailAlias
