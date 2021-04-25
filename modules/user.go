@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"html/template"
 	"io/ioutil"
 	"net/http"
 
@@ -45,6 +46,8 @@ func ModifyUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	usrinfo := model.UserInfoModify{}
+	usrinfo.Name = template.HTMLEscapeString(usrinfo.Name)
+	usrinfo.StuID = template.HTMLEscapeString(usrinfo.StuID)
 	err = jsoniter.Unmarshal(bd, &usrinfo)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)

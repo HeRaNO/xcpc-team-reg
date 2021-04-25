@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"html/template"
 	"io/ioutil"
 	"net/http"
 	"unicode/utf8"
@@ -67,6 +68,7 @@ func ModifyTeamInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	teamInfo := model.TeamInfoModify{}
+	teamInfo.TeamName = template.HTMLEscapeString(teamInfo.TeamName)
 	err = jsoniter.Unmarshal(bd, &teamInfo)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
