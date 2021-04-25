@@ -21,7 +21,7 @@ type TeamInfoModify struct {
 }
 
 type JoinTeamRequest struct {
-	TeamID      int64  `json:"team_id"`
+	TeamID      string `json:"team_id"`
 	InviteToken string `json:"invite_token"`
 }
 

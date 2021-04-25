@@ -63,6 +63,22 @@ func SendValidationEmail(w http.ResponseWriter, r *http.Request) {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
 	}
+	uid, err := model.GetUserIDByEmail(r.Context(), &info.Email)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+	if info.Type == "register" {
+		if uid != -1 {
+			util.ErrorResponse(w, r, "email has already registered", config.ERR_WRONGINFO)
+			return
+		}
+	} else {
+		if uid == -1 {
+			util.ErrorResponse(w, r, "no such user", config.ERR_WRONGINFO)
+			return
+		}
+	}
 
 	err = model.GetEmailRequest(r.Context(), &info.Email)
 	if err != nil {

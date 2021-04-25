@@ -203,20 +203,18 @@ func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]UserInfo, error) {
 
 	usrInfo := make([]UserInfo, config.MaxTeamMember)
 
-	for _, usr := range rec {
+	for i, usr := range rec {
 		usrSchool := "undefined"
 
 		if school, ok := config.IDSchoolMap[usr.School]; ok {
 			usrSchool = school
 		}
-		info := UserInfo{
+		usrInfo[i] = UserInfo{
 			Name:       usr.Name,
 			School:     usrSchool,
 			StuID:      usr.StuID,
 			BelongTeam: usr.BelongTeam,
 		}
-
-		usrInfo = append(usrInfo, info)
 	}
 
 	return usrInfo, nil

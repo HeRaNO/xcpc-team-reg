@@ -1,9 +1,11 @@
 package modules
 
 import (
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/HeRaNO/xcpc-team-reg/config"
@@ -78,7 +80,7 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	teamInfoResp := model.JoinTeamRequest{
-		TeamID:      tid,
+		TeamID:      fmt.Sprintf("%d", tid),
 		InviteToken: inviteToken,
 	}
 
@@ -124,7 +126,11 @@ func JoinTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	joinTeamID := teamInfo.TeamID
+	joinTeamID, err := strconv.ParseInt(teamInfo.TeamID, 10, 64)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_WRONGINFO)
+		return
+	}
 	joinTeamToken := teamInfo.InviteToken
 
 	isValidToken, err := model.ValidateTeamInviteToken(r.Context(), joinTeamID, &joinTeamToken)

@@ -3,6 +3,7 @@ package routers
 import (
 	"net/http"
 
+	"github.com/HeRaNO/xcpc-team-reg/config"
 	"github.com/HeRaNO/xcpc-team-reg/middleware"
 	"github.com/HeRaNO/xcpc-team-reg/modules"
 
@@ -19,7 +20,7 @@ func InitRouters() http.Handler {
 	r.Use(chi_middleware.Logger)
 	r.Use(chi_middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{"http://" + config.Domain, "https://" + config.Domain},
 		AllowedMethods:   []string{"GET", "POST"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,

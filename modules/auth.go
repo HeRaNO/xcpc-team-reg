@@ -89,6 +89,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	fgpCookie := http.Cookie{
 		Name:     config.JWTFingerPrintName,
 		Value:    secretToken,
+		Path:     "/",
+		Domain:   config.Domain,
 		Expires:  nowTime.Add(config.LOGIN_EXPIRETIME),
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
@@ -105,9 +107,15 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fgpCookie, _ := r.Cookie(config.JWTFingerPrintName)
-	fgpCookie.MaxAge = -1
+	fgpExpireCookie := http.Cookie{
+		Name:     config.JWTFingerPrintName,
+		Path:     "/",
+		Domain:   config.Domain,
+		Expires:  time.Now(),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
 
-	http.SetCookie(w, fgpCookie)
+	http.SetCookie(w, &fgpExpireCookie)
 	util.SuccessResponse(w, r, "ok")
 }

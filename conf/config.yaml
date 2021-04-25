@@ -12,6 +12,7 @@ Redis:
   Password: ""
   DB: 0
 Server:
+  Domain: ""
   Port: 12345
   SMTPAddr: ""
   SMTPPort: 465
