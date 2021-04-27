@@ -37,6 +37,8 @@ func GetTeamInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	info.TeamName = template.HTMLEscapeString(info.TeamName)
+
 	util.SuccessResponse(w, r, *info)
 }
 

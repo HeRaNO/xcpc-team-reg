@@ -31,6 +31,9 @@ func GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	info.Name = template.HTMLEscapeString(info.Name)
+	info.StuID = template.HTMLEscapeString(info.StuID)
+
 	util.SuccessResponse(w, r, *info)
 }
 
