@@ -70,14 +70,13 @@ func ModifyTeamInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	teamInfo := model.TeamInfoModify{}
-	teamInfo.TeamName = template.HTMLEscapeString(teamInfo.TeamName)
 	err = jsoniter.Unmarshal(bd, &teamInfo)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
 	}
 
-	teamName := teamInfo.TeamName
+	teamName := template.HTMLEscapeString(teamInfo.TeamName)
 	nameLength := utf8.RuneCountInString(teamName)
 	if nameLength < 1 {
 		util.ErrorResponse(w, r, "team name cannot be empty", config.ERR_WRONGINFO)

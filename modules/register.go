@@ -24,14 +24,14 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	usrinfo := model.UserRegister{}
-	usrinfo.Name = template.HTMLEscapeString(usrinfo.Name)
-	usrinfo.StuID = template.HTMLEscapeString(usrinfo.StuID)
 	err = jsoniter.Unmarshal(bd, &usrinfo)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
 		return
 	}
 
+	usrinfo.Name = template.HTMLEscapeString(usrinfo.Name)
+	usrinfo.StuID = template.HTMLEscapeString(usrinfo.StuID)
 	uid, err := model.GetUserIDByEmail(r.Context(), &usrinfo.Email)
 	if err != nil {
 		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
