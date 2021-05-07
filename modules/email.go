@@ -86,7 +86,11 @@ func SendValidationEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := util.GenToken(config.UserTokenLength)
+	token, err := util.GenToken(config.UserTokenLength)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
 
 	err = model.SetEmailToken(r.Context(), &info.Email, &token)
 	if err != nil {

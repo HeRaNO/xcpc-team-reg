@@ -76,7 +76,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fingerPrintToken := util.GenToken(config.FingerPrintTokenLength)
+	fingerPrintToken, err := util.GenToken(config.FingerPrintTokenLength)
+	if err != nil {
+		util.ErrorResponse(w, r, err.Error(), config.ERR_INTERNAL)
+		return
+	}
+
 	nowTime := time.Now()
 	secretToken := fmt.Sprintf("%d_%d_%s", nowTime.Unix(), uid, fingerPrintToken)
 

@@ -167,6 +167,11 @@ func CreateNewTeam(ctx context.Context, tname *string, uid int64) (int64, string
 		return -1, "", err
 	}
 
+	inviteToken, err := util.GenToken(config.UserTokenLength)
+	if err != nil {
+		return -1, "", err
+	}
+
 	trans := config.RDB.Begin()
 	info := Team{
 		TeamName:  *tname,
@@ -180,7 +185,6 @@ func CreateNewTeam(ctx context.Context, tname *string, uid int64) (int64, string
 	}
 
 	tid := info.TeamID
-	inviteToken := util.GenToken(config.UserTokenLength)
 	err = SetTeamInviteToken(ctx, tid, &inviteToken)
 	if err != nil {
 		trans.WithContext(ctx).Rollback()

@@ -1,40 +1,29 @@
 package util
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"math/rand"
-	"time"
+	"math/big"
 )
 
 const sigma = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-const (
-	letterIdxBits = 6
-	letterIdxMask = 63
-	letterIdxMax  = 10
-)
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-func GenToken(n int) string {
+// Generate a token whose length is `n`
+func GenToken(n int) (string, error) {
 	b := make([]byte, n)
-	for i, rnd, left := n-1, rand.Int63(), letterIdxMax; i >= 0; {
-		if left == 0 {
-			rnd, left = rand.Int63(), letterIdxMax
+	rng := new(big.Int).SetInt64(int64(len(sigma)))
+	for i := 0; i < n; i++ {
+		idx, err := rand.Int(rand.Reader, rng)
+		if err != nil {
+			return "", err
 		}
-		if idx := int(rnd & letterIdxMask); idx < len(sigma) {
-			b[i] = sigma[idx]
-			i--
-		}
-		rnd >>= letterIdxBits
-		left--
+		b[i] = sigma[idx.Int64()]
 	}
-	return string(b)
+	return string(b), nil
 }
 
+// Get the SHA256 of `msg`
 func SHA256(msg []byte) string {
 	h := sha256.Sum256(msg)
 	return hex.EncodeToString(h[:])
