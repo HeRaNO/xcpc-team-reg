@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <p>
+            亲爱的{{.Name}}同学：
+        </p>
+        <p>
+            现{{.ContestName}}报名正在进行中，但您还没有加入队伍。只有进入队伍才算报名成功，即使是单人队也需要组建一个队伍。<br>
+            请在报名截止（{{.EndTime}}）前加入一个队伍，否则按照未报名处理。
+        </p>
+        <p>
+            请不要回复此邮件。
+        </p>
+        <p>
+            {{.Sign}}
+        </p>
+    </body>
+</html>
