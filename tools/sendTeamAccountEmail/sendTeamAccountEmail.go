@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/smtp"
+	"sync"
 	"text/template"
 
 	"github.com/jordan-wright/email"
@@ -115,19 +116,28 @@ func initConfig(filePath *string) {
 
 const (
 	TableUserInfo = "t_user"
+	TableTeamInfo = "t_team"
 )
 
 type User struct {
 	UserID     int64  `gorm:"column:user_id;primaryKey" json:"userid"`
 	Name       string `gorm:"column:user_name" json:"name"`
 	Email      string `gorm:"column:email" json:"email"`
-	School     int    `gorm:"column:school" json:"school"`
-	StuID      string `gorm:"column:stu_id" json:"stuid"`
 	BelongTeam int64  `gorm:"column:belong_team" json:"teamid"`
-	IsAdmin    int    `gorm:"column:is_admin" json:"is_admin"`
 }
 
-func sendEmail(name *string, emailRecv *string) error {
+type Team struct {
+	TeamID       int64  `gorm:"column:team_id;primaryKey" json:"team_id"`
+	TeamAccount  string `gorm:"column:team_account" json:"account"`
+	TeamPassword string `gorm:"column:team_password" json:"password"`
+}
+
+type TeamAcc struct {
+	TeamAccount  string
+	TeamPassword string
+}
+
+func sendEmail(name, account, password, emailRecv *string) error {
 	tmpl, err := template.ParseFiles("./email_template.tmpl")
 
 	if err != nil {
@@ -136,21 +146,21 @@ func sendEmail(name *string, emailRecv *string) error {
 
 	content := new(bytes.Buffer)
 	tmpl.Execute(content, struct {
-		Name        string
-		ContestName string
-		EndTime     string
-		Sign        string
+		Name         string
+		TeamAccount  string
+		TeamPassword string
+		Sign         string
 	}{
-		Name:        *name,
-		ContestName: "电子科技大学第十九届程序设计竞赛（补报）",
-		EndTime:     "2021-05-11 11:59:59",
-		Sign:        EmailSign,
+		Name:         *name,
+		TeamAccount:  *account,
+		TeamPassword: *password,
+		Sign:         EmailSign,
 	})
 
 	e := &email.Email{
 		To:      []string{*emailRecv},
 		From:    EmailFrom,
-		Subject: "校赛报名通知",
+		Subject: "【通知】校赛初赛相关信息",
 		HTML:    content.Bytes(),
 	}
 
@@ -166,24 +176,56 @@ func main() {
 
 	initConfig(configFilePath)
 
-	rec := make([]User, 0)
-	result := RDB.Model(&User{}).Table(TableUserInfo).Where("belong_team = ?", 0).Find(&rec)
+	usrs := make([]User, 0)
+	teams := make([]Team, 0)
+	teamMap := make(map[int64]TeamAcc)
 
+	result := RDB.Model(&Team{}).Table(TableTeamInfo).Find(&teams)
 	if result.Error != nil {
 		panic(result.Error)
 	}
 
-	failed := make([]int64, 0)
-
-	for _, usr := range rec {
-		err := sendEmail(&usr.Name, &usr.Email)
-		if err != nil {
-			log.Printf("[ERROR] send email error, usr: %+v, err: %s", usr, err.Error())
-			failed = append(failed, usr.UserID)
-		} else {
-			log.Printf("[INFO] send email ok, user_id: %d", usr.UserID)
+	for _, team := range teams {
+		teamMap[team.TeamID] = TeamAcc{
+			TeamAccount:  team.TeamAccount,
+			TeamPassword: team.TeamPassword,
 		}
 	}
 
-	log.Printf("[INFO] send email finished. failed id: %+v", failed)
+	result = RDB.Model(&User{}).Table(TableUserInfo).Where("belong_team <> ?", 0).Find(&usrs)
+	if result.Error != nil {
+		panic(result.Error)
+	}
+
+	failed := sync.Map{}
+	wg := sync.WaitGroup{}
+
+	for _, usr := range usrs {
+		wg.Add(1)
+		go func(usr User) {
+			defer wg.Done()
+			acc, ok := teamMap[usr.BelongTeam]
+			if !ok {
+				log.Printf("[ERROR] send email error, usr: %+v, cannot find belong_team", usr)
+				failed.Store(usr.UserID, true)
+				return
+			}
+			err := sendEmail(&usr.Name, &acc.TeamAccount, &acc.TeamPassword, &usr.Email)
+			if err != nil {
+				log.Printf("[ERROR] send email error, usr: %+v, err: %s", usr, err.Error())
+				failed.Store(usr.UserID, true)
+			} else {
+				log.Printf("[INFO] send email ok, user_id: %d", usr.UserID)
+			}
+		}(usr)
+	}
+	wg.Wait()
+
+	failedIDs := make([]int64, 0)
+	failed.Range(func(key, value interface{}) bool {
+		failedIDs = append(failedIDs, key.(int64))
+		return true
+	})
+
+	log.Printf("[INFO] send email finished. failed id: %+v", failedIDs)
 }
