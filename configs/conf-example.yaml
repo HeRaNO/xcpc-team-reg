@@ -1,0 +1,28 @@
+RDB:
+  Host: "localhost"
+  Port: 5432
+  Username: ""
+  Password: ""
+Redis:
+  Host: "localhost"
+  Port: 6379
+  Password: ""
+Server:
+  Domain: ""
+  Port: 12345
+Email:
+  SMTPAddr: "smtp.example.com"
+  SMTPPort: 465
+  EmailSign: "UESTC ACM-ICPC Training Team"
+  EmailAlias: "noreply"
+  EmailAddr: "noreply@example.com"
+  EmailPassword: "password"
+Contest:
+  Name: "" # Contest name
+  StartTime: "2021-04-06 12:00:00" # Registration start time
+  EndTime: "2021-04-06 18:00:00" # Registration end time
+  Note: "" # Contest note
+  ValidStuIDLength: [13] # Just an example
+  ValidTshirtSize: ['S', 'M', 'L', 'XL', '2XL', '3XL']
+  SchoolName: # Should be identical to the offical website
+    - "School 1" # Just an example

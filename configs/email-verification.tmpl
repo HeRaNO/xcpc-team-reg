@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <p>
+            您在 {{.Time}} 执行{{.Action}}操作的验证码为 <b>{{.Token}}</b>。此验证码在 10 分钟内有效，请尽快完成操作。
+        </p>
+        <p>
+            如果您没有执行这个操作，请忽略本邮件，您的账号仍然是安全的。
+        </p>
+        <p>
+            请不要回复此邮件。
+        </p>
+        <p>
+            {{.Sign}}
+        </p>
+    </body>
+</html>
