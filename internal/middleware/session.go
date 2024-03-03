@@ -18,15 +18,18 @@ func Authenticator() app.HandlerFunc {
 		v := session.Get(internal.SessionName)
 		if v == nil {
 			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrUnauthorized, "no session found"))
+			return
 		}
 		sessionID, ok := v.(string)
 		if !ok {
 			hlog.CtxErrorf(ctx, "session cannot convert to string: %+v", v)
 			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, "internal error"))
+			return
 		}
 		uid, err := redis.GetSession(ctx, &sessionID)
 		if err != nil || uid == 0 {
 			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, "internal error"))
+			return
 		}
 		c.Set("uid", uid)
 		c.Next(ctx)
@@ -39,6 +42,7 @@ func CheckUnauthorized() app.HandlerFunc {
 		v := session.Get(internal.SessionName)
 		if v != nil {
 			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrUnauthorized, "login status hasn't expired"))
+			return
 		}
 		c.Next(ctx)
 	}

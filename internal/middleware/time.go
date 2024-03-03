@@ -15,6 +15,7 @@ func CheckBeforeEnd() app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
 		if contest.AfterRegTime(time.Now()) {
 			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrOutOfTime, "registration has ended"))
+			return
 		}
 		c.Next(ctx)
 	}
@@ -24,6 +25,7 @@ func CheckAfterBegin() app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
 		if contest.BeforeRegTime(time.Now()) {
 			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrOutOfTime, "registration has not started yet"))
+			return
 		}
 		c.Next(ctx)
 	}
