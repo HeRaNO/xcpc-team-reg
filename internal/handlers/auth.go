@@ -90,7 +90,20 @@ func Login(ctx context.Context, c *app.RequestContext) {
 
 func Logout(ctx context.Context, c *app.RequestContext) {
 	session := sessions.Default(c)
-	session.Clear()
+	sid, ok := session.Get(internal.SessionName).(string)
+	if !ok {
+		hlog.Errorf("Logout(): no id in session")
+		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, "no id in session"))
+		return
+	}
+	err := redis.DelSession(ctx, &sid)
+	if err != nil {
+		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		return
+	}
+	session.Options(sessions.Options{
+		MaxAge: -1,
+	})
 	if err := session.Save(); err != nil {
 		hlog.Errorf("Logout(): save session failed, err: %+v", err)
 		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))

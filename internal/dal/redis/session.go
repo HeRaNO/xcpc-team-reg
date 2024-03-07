@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/common/hlog"
@@ -31,6 +32,21 @@ func SetSession(ctx context.Context, sid *string, uid int64) error {
 	_, err := redisClient.Set(ctx, key, uid, 0).Result()
 	if err != nil {
 		hlog.Errorf("SetSession(): redis set error, err: %+v", err)
+		return err
+	}
+	return nil
+}
+
+func DelSession(ctx context.Context, sid *string) error {
+	key := makeSessionKey(sid)
+	n, err := redisClient.Del(ctx, key).Result()
+	if err != nil {
+		hlog.Errorf("DelSession(): redis del error, err: %+v", err)
+		return err
+	}
+	if n == 0 {
+		err := errors.New("no sid found")
+		hlog.Errorf("DelSession(): redis del error, err: %+v", err)
 		return err
 	}
 	return nil
