@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/rdb"
@@ -102,7 +103,11 @@ func Logout(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	session.Options(sessions.Options{
-		MaxAge: -1,
+		Path:     "/",
+		Domain:   internal.Domain,
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	})
 	if err := session.Save(); err != nil {
 		hlog.Errorf("Logout(): save session failed, err: %+v", err)
