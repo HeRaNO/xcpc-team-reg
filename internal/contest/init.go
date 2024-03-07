@@ -46,7 +46,7 @@ func Init(conf *config.ContestConfig) {
 	for i, schoolName := range conf.SchoolName {
 		idSchoolMap[i+1] = schoolName
 	}
-	for _, stuIDLength := range conf.ValidStuIDLength {
+	for _, stuIDLength := range ValidStuIDLength {
 		validStuIDLength[stuIDLength] = true
 	}
 	for _, size := range conf.ValidTshirtSize {

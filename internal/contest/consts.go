@@ -5,3 +5,5 @@ const (
 	MaxTeamNameLength = 25
 	UserTokenLength   = 8
 )
+
+var ValidStuIDLength = [...]int{12, 13}

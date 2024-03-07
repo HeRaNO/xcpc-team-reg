@@ -36,11 +36,10 @@ type EmailConfig struct {
 }
 
 type ContestConfig struct {
-	Name             string   `yaml:"Name"`
-	StartTime        string   `yaml:"StartTime"`
-	EndTime          string   `yaml:"EndTime"`
-	Note             string   `yaml:"Note"`
-	ValidStuIDLength []int    `yaml:"ValidStuIDLength"`
-	ValidTshirtSize  []string `yaml:"ValidTshirtSize"`
-	SchoolName       []string `yaml:"SchoolName"`
+	Name            string   `yaml:"Name"`
+	StartTime       string   `yaml:"StartTime"`
+	EndTime         string   `yaml:"EndTime"`
+	Note            string   `yaml:"Note"`
+	ValidTshirtSize []string `yaml:"ValidTshirtSize"`
+	SchoolName      []string `yaml:"SchoolName"`
 }
