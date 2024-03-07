@@ -9,5 +9,5 @@ type Auth struct {
 type UserLoginReq struct {
 	StuID    *string `json:"stuid,omitempty"`
 	Email    *string `json:"email,omitempty"`
-	PwdToken string  `json:"pwd"`
+	PwdToken string  `json:"pwd_token"`
 }
