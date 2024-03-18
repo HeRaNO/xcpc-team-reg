@@ -138,21 +138,24 @@ func GetTeamInviteTokenByTeamID(ctx context.Context, tid int64) (*string, error)
 	return &token, nil
 }
 
-func ModifyTeamInfoByTeamID(ctx context.Context, tid int64, team *model.TeamInfoModifyReq) error {
+func GetTeamNameByTeamID(ctx context.Context, tid int64) (*string, error) {
 	ori := map[string]interface{}{}
 	result := db.WithContext(ctx).Table(tableTeamInfo).Select("team_name").Where("team_id = ?", tid).Find(&ori)
 
 	if result.Error != nil {
-		hlog.Errorf("ModifyTeamInfoByTeamID(): query ori team name failed, err: %+v", result.Error)
-		return result.Error
+		hlog.Errorf("GetTeamNameByTeamID(): query ori team name failed, err: %+v", result.Error)
+		return nil, result.Error
 	}
 	if result.RowsAffected == 0 {
-		hlog.Infof("ModifyTeamInfoByTeamID(): no team record, tid: %d", tid)
-		return errors.New("no team record")
+		hlog.Infof("GetTeamNameByTeamID(): no team record, tid: %d", tid)
+		return nil, errors.New("no team record")
 	}
 
 	oriTeamName := ori["team_name"].(string)
+	return &oriTeamName, nil
+}
 
+func ModifyTeamInfoByTeamID(ctx context.Context, tid int64, team *model.TeamInfoModifyReq) error {
 	trans := db.Begin()
 	err := trans.WithContext(ctx).Model(&model.TeamInfoModifyReq{}).Table(tableTeamInfo).Where("team_id = ?", tid).Updates(team).Error
 	if err != nil {
@@ -161,26 +164,32 @@ func ModifyTeamInfoByTeamID(ctx context.Context, tid int64, team *model.TeamInfo
 		return err
 	}
 
-	if team.TeamName != nil && *team.TeamName != oriTeamName {
-		err = redis.DelTeamName(ctx, &oriTeamName)
+	oriTeamName := new(string)
+
+	if team.TeamName != nil {
+		oriTeamName, err = GetTeamNameByTeamID(ctx, tid)
 		if err != nil {
 			trans.WithContext(ctx).Rollback()
 			return err
 		}
-
+		err = redis.DelTeamName(ctx, oriTeamName)
+		if err != nil {
+			trans.WithContext(ctx).Rollback()
+			return err
+		}
 		err = redis.AddTeamName(ctx, team.TeamName)
 		if err != nil {
 			trans.WithContext(ctx).Rollback()
-			redis.AddTeamName(ctx, &oriTeamName)
+			redis.AddTeamName(ctx, oriTeamName)
 			return err
 		}
 	}
 
 	if err := trans.Commit().Error; err != nil {
 		hlog.Errorf("ModifyTeamInfoByTeamID(): transaction failed, err: %+v", err)
-		if *team.TeamName != "" && *team.TeamName != oriTeamName {
+		if team.TeamName != nil {
 			redis.DelTeamName(ctx, team.TeamName)
-			redis.AddTeamName(ctx, &oriTeamName)
+			redis.AddTeamName(ctx, oriTeamName)
 		}
 		return err
 	}

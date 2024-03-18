@@ -72,16 +72,23 @@ func ModifyTeamInfo(ctx context.Context, c *app.RequestContext) {
 			c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "team name too long or too short"))
 			return
 		}
-		isUsed, err := redis.IsTeamNameUsed(ctx, &name)
+		oriName, err := rdb.GetTeamNameByTeamID(ctx, usrInfo.BelongTeam)
 		if err != nil {
 			c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
 			return
 		}
-		if isUsed {
-			c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "team name is used"))
-			return
+		if *oriName != name {
+			isUsed, err := redis.IsTeamNameUsed(ctx, &name)
+			if err != nil {
+				c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+				return
+			}
+			if isUsed {
+				c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "team name is used"))
+				return
+			}
+			req.TeamName = &name
 		}
-		req.TeamName = &name
 	}
 	if req.TeamAffiliation != nil {
 		affi := template.HTMLEscapeString(*req.TeamAffiliation)
