@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"html/template"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
@@ -30,6 +29,11 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	}
 	if !contest.IsValidSchool(req.School) {
 		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "invalid school id"))
+		return
+	}
+	name := utils.TrimName(&req.Name)
+	if *name == "" {
+		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "name cannot be empty"))
 		return
 	}
 
@@ -80,7 +84,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	}
 
 	regReq := rdb.UserRegInfo{
-		Name:       template.HTMLEscapeString(req.Name),
+		Name:       *name,
 		School:     req.School,
 		Email:      e_mail,
 		StuID:      stuID,

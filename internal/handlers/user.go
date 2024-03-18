@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"html/template"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
@@ -51,8 +50,10 @@ func ModifyUserInfo(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	if req.Name != nil {
-		name := template.HTMLEscapeString(*req.Name)
-		req.Name = &name
+		req.Name = utils.TrimName(req.Name)
+		if *req.Name == "" {
+			req.Name = nil
+		}
 	}
 
 	err = rdb.ModifyUserInfoByID(ctx, uid, &req)
