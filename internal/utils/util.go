@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"html/template"
 	"regexp"
 	"strings"
 )
@@ -14,6 +13,5 @@ func IsNumber(x *string) bool {
 
 func TrimName(x *string) *string {
 	r := strings.TrimSpace(*x)
-	r = template.HTMLEscapeString(r)
 	return &r
 }
