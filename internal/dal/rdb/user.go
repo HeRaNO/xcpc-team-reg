@@ -2,13 +2,13 @@ package rdb
 
 import (
 	"context"
-	"errors"
 
+	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/pkg/model"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 )
 
-func CreateNewUser(ctx context.Context, usr *UserRegInfo) error {
+func CreateNewUser(ctx context.Context, usr *UserRegInfo) berrors.Berror {
 	trans := db.Begin()
 	info := model.User{
 		Name:       usr.Name,
@@ -22,7 +22,7 @@ func CreateNewUser(ctx context.Context, usr *UserRegInfo) error {
 	if err != nil {
 		hlog.Errorf("CreateNewUser(): create trans failed, err: %+v", err)
 		trans.WithContext(ctx).Rollback()
-		return err
+		return errDB
 	}
 	uid := info.UserID
 	authInfo := model.Auth{
@@ -30,29 +30,29 @@ func CreateNewUser(ctx context.Context, usr *UserRegInfo) error {
 		Email:  usr.Email,
 		Pwd:    usr.PwdToken,
 	}
-	err = AddAuthInfo(ctx, &authInfo)
-	if err != nil {
+	errAuth := AddAuthInfo(ctx, &authInfo)
+	if errAuth != nil {
 		trans.WithContext(ctx).Rollback()
-		return err
+		return errDB
 	}
 	if err := trans.Commit().Error; nil != err {
 		hlog.Errorf("CreateNewUser(): transaction failed, err: %+v", err)
-		return err
+		return errDB
 	}
 	return nil
 }
 
-func GetUserInfoByID(ctx context.Context, uid int64) (*model.UserInfo, error) {
+func GetUserInfoByID(ctx context.Context, uid int64) (*model.UserInfo, berrors.Berror) {
 	rec := make([]model.User, 0)
 	result := db.Model(&model.User{}).Table(tableUserInfo).Where("user_id = ?", uid).Find(&rec)
 
 	if result.Error != nil {
 		hlog.Errorf("GetUserInfoByID(): query failed, err: %+v", result.Error)
-		return nil, result.Error
+		return nil, errDB
 	}
 	if result.RowsAffected == 0 {
 		hlog.Infof("GetUserInfoByID(): no user record, uid: %d", uid)
-		return nil, errors.New("no user record")
+		return nil, errNoUserRecord
 	}
 
 	usrinfo := &model.UserInfo{
@@ -67,16 +67,15 @@ func GetUserInfoByID(ctx context.Context, uid int64) (*model.UserInfo, error) {
 	return usrinfo, nil
 }
 
-func ModifyUserInfoByID(ctx context.Context, uid int64, usrinfo *model.UserInfoModifyReq) error {
+func ModifyUserInfoByID(ctx context.Context, uid int64, usrinfo *model.UserInfoModifyReq) berrors.Berror {
 	result := db.WithContext(ctx).Model(&model.UserInfoModifyReq{}).Table(tableUserInfo).Where("user_id = ?", uid).Updates(usrinfo)
 
 	if result.Error != nil {
 		hlog.Errorf("ModifyUserInfoByID(): update failed, err: %+v", result.Error)
-		return result.Error
+		return errDB
 	}
 	if result.RowsAffected == 0 {
 		hlog.Infof("ModifyUserInfoByID(): no record affected, uid: %d, info: %+v", uid, usrinfo)
-		return nil
 	}
 
 	return nil

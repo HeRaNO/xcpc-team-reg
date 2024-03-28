@@ -4,28 +4,29 @@ import (
 	"context"
 	"errors"
 
+	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
-	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
 	"github.com/HeRaNO/xcpc-team-reg/pkg/model"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"gorm.io/gorm"
 )
 
-func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]model.UserInfo, error) {
+func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]model.UserInfo, berrors.Berror) {
 	rec := make([]model.User, contest.MaxTeamMember)
 	result := db.Model(&model.User{}).Table(tableUserInfo).Where("belong_team = ?", tid).Find(&rec)
 
 	if result.Error != nil {
 		hlog.Errorf("GetUserInfosByTeamID(): query failed, err: %+v", result.Error)
-		return nil, result.Error
+		return nil, errDB
 	}
 	if result.RowsAffected == 0 {
 		hlog.Errorf("GetUserInfosByTeamID(): no user in team, tid: %d", tid)
-		return nil, errors.New("no user in this team but why???")
+		return nil, errDB
 	}
 	if result.RowsAffected > int64(contest.MaxTeamMember) {
 		hlog.Errorf("GetUserInfosByTeamID(): %d user in team, tid: %d", result.RowsAffected, tid)
-		return nil, errors.New("too many members in this team but why???")
+		return nil, errDB
 	}
 
 	usrInfo := make([]model.UserInfo, 0)
@@ -44,15 +45,11 @@ func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]model.UserInfo, err
 	return usrInfo, nil
 }
 
-func CreateNewTeam(ctx context.Context, uid int64, team *model.TeamInfoModifyReq) (int64, string, error) {
-	err := redis.AddTeamName(ctx, team.TeamName)
-	if err != nil {
-		return 0, "", err
-	}
-
-	inviteToken, err := utils.GenToken(contest.UserTokenLength)
-	if err != nil {
-		return 0, "", err
+func CreateNewTeam(ctx context.Context, uid int64, team *model.TeamInfoModifyReq) (int64, string, berrors.Berror) {
+	inviteToken, errTk := utils.GenToken(contest.UserTokenLength)
+	if errTk != nil {
+		hlog.Errorf("CreateNewTeam(): gen token failed: %+v", errTk.Msg())
+		return 0, "", errTk
 	}
 
 	trans := db.Begin()
@@ -62,12 +59,14 @@ func CreateNewTeam(ctx context.Context, uid int64, team *model.TeamInfoModifyReq
 		MemberCnt:       1,
 		InviteToken:     inviteToken,
 	}
-	err = trans.WithContext(ctx).Model(&model.Team{}).Table(tableTeamInfo).Create(&info).Error
+	err := trans.WithContext(ctx).Model(&model.Team{}).Table(tableTeamInfo).Create(&info).Error
 	if err != nil {
-		hlog.Errorf("CreateNewTeam(): trans create team failed, err: %+v", err)
-		redis.DelTeamName(ctx, team.TeamName)
 		trans.WithContext(ctx).Rollback()
-		return 0, "", err
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return 0, "", errDuplicatedName
+		}
+		hlog.Errorf("CreateNewTeam(): trans create team failed, err: %+v", err)
+		return 0, "", errDB
 	}
 
 	tid := info.TeamID
@@ -76,30 +75,28 @@ func CreateNewTeam(ctx context.Context, uid int64, team *model.TeamInfoModifyReq
 	if err != nil {
 		hlog.Errorf("CreateNewTeam(): trans update user team id failed, err: %+v", err)
 		trans.WithContext(ctx).Rollback()
-		redis.DelTeamName(ctx, team.TeamName)
-		return 0, "", err
+		return 0, "", errDB
 	}
 
 	if err := trans.Commit().Error; err != nil {
 		hlog.Errorf("CreateNewTeam(): transaction failed, err: %+v", err)
-		redis.DelTeamName(ctx, team.TeamName)
-		return 0, "", err
+		return 0, "", errDB
 	}
 
 	return tid, inviteToken, nil
 }
 
-func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*model.TeamInfo, error) {
+func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*model.TeamInfo, berrors.Berror) {
 	rec := make([]model.Team, 0)
 	result := db.Model(&model.Team{}).Table(tableTeamInfo).Where("team_id = ?", tid).Find(&rec)
 
 	if result.Error != nil {
 		hlog.Errorf("GetTeamInfoByTeamID(): query failed, err: %+v", result.Error)
-		return nil, result.Error
+		return nil, errDB
 	}
 	if result.RowsAffected == 0 {
 		hlog.Infof("GetTeamInfoByTeamID(): no team record, tid: %d", tid)
-		return nil, errors.New("no team record")
+		return nil, errDB
 	}
 
 	usrInfo, err := GetUserInfosByTeamID(ctx, tid)
@@ -120,17 +117,17 @@ func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*model.TeamInfo, error
 	return teamInfo, nil
 }
 
-func GetTeamInviteTokenByTeamID(ctx context.Context, tid int64) (*string, error) {
+func GetTeamInviteTokenByTeamID(ctx context.Context, tid int64) (*string, berrors.Berror) {
 	ori := map[string]interface{}{}
 	result := db.WithContext(ctx).Table(tableTeamInfo).Select("invite_token").Where("team_id = ?", tid).Find(&ori)
 
 	if result.Error != nil {
 		hlog.Errorf("GetTeamInviteTokenByTeamID(): query failed, err: %s", result.Error)
-		return nil, result.Error
+		return nil, errDB
 	}
 	if result.RowsAffected == 0 {
 		hlog.Infof("GetTeamInviteTokenByTeamID(): no team record, tid: %d", tid)
-		return nil, errors.New("no team record")
+		return nil, errNoTeamRecord
 	}
 
 	token := ori["invite_token"].(string)
@@ -138,69 +135,27 @@ func GetTeamInviteTokenByTeamID(ctx context.Context, tid int64) (*string, error)
 	return &token, nil
 }
 
-func GetTeamNameByTeamID(ctx context.Context, tid int64) (*string, error) {
-	ori := map[string]interface{}{}
-	result := db.WithContext(ctx).Table(tableTeamInfo).Select("team_name").Where("team_id = ?", tid).Find(&ori)
-
+func ModifyTeamInfoByTeamID(ctx context.Context, tid int64, team *model.TeamInfoModifyReq) berrors.Berror {
+	result := db.WithContext(ctx).Model(&model.TeamInfoModifyReq{}).Table(tableTeamInfo).Where("team_id = ?", tid).Updates(team)
 	if result.Error != nil {
-		hlog.Errorf("GetTeamNameByTeamID(): query ori team name failed, err: %+v", result.Error)
-		return nil, result.Error
+		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+			return errDuplicatedName
+		}
+		hlog.Errorf("ModifyTeamInfoByTeamID(): update failed: %+v", result.Error)
+		return errDB
 	}
 	if result.RowsAffected == 0 {
-		hlog.Infof("GetTeamNameByTeamID(): no team record, tid: %d", tid)
-		return nil, errors.New("no team record")
+		hlog.Infof("ModifyTeamInfoByTeamID(): no record affected, tid: %d, info: %+v", tid, team)
 	}
 
-	oriTeamName := ori["team_name"].(string)
-	return &oriTeamName, nil
-}
-
-func ModifyTeamInfoByTeamID(ctx context.Context, tid int64, team *model.TeamInfoModifyReq) error {
-	trans := db.Begin()
-	err := trans.WithContext(ctx).Model(&model.TeamInfoModifyReq{}).Table(tableTeamInfo).Where("team_id = ?", tid).Updates(team).Error
-	if err != nil {
-		hlog.Errorf("ModifyTeamInfoByTeamID(): trans make update failed: %+v", err)
-		trans.WithContext(ctx).Rollback()
-		return err
-	}
-
-	oriTeamName := new(string)
-
-	if team.TeamName != nil {
-		oriTeamName, err = GetTeamNameByTeamID(ctx, tid)
-		if err != nil {
-			trans.WithContext(ctx).Rollback()
-			return err
-		}
-		err = redis.DelTeamName(ctx, oriTeamName)
-		if err != nil {
-			trans.WithContext(ctx).Rollback()
-			return err
-		}
-		err = redis.AddTeamName(ctx, team.TeamName)
-		if err != nil {
-			trans.WithContext(ctx).Rollback()
-			redis.AddTeamName(ctx, oriTeamName)
-			return err
-		}
-	}
-
-	if err := trans.Commit().Error; err != nil {
-		hlog.Errorf("ModifyTeamInfoByTeamID(): transaction failed, err: %+v", err)
-		if team.TeamName != nil {
-			redis.DelTeamName(ctx, team.TeamName)
-			redis.AddTeamName(ctx, oriTeamName)
-		}
-		return err
-	}
 	return nil
 }
 
 func GetAllTeams() ([]model.Team, error) {
 	teams := make([]model.Team, 0)
-	result := db.Model(&model.Team{}).Table(tableTeamInfo).Find(&teams)
-	if result.Error != nil {
-		return nil, result.Error
+	err := db.Model(&model.Team{}).Table(tableTeamInfo).Find(&teams).Error
+	if err != nil {
+		return nil, err
 	}
 	return teams, nil
 }

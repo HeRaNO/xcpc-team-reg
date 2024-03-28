@@ -3,75 +3,60 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"strconv"
-	"unicode/utf8"
+	"strings"
 
-	"github.com/HeRaNO/xcpc-team-reg/internal"
-	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/rdb"
-	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
 	"github.com/HeRaNO/xcpc-team-reg/pkg/model"
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
 func CreateTeam(ctx context.Context, c *app.RequestContext) {
 	uid, err := getUID(c)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		hlog.Errorf("CreateTeam(): getUID failed, err: %+v", err.Msg())
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInternal))
 		return
 	}
 
 	usrInfo, err := rdb.GetUserInfoByID(ctx, uid)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 	if usrInfo.BelongTeam != 0 {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "user has already joined in a team"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInTeam))
 		return
 	}
 
 	req := model.TeamInfoModifyReq{}
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, err.Error()))
+	erro := c.BindAndValidate(&req)
+	if erro != nil {
+		hlog.Errorf("CreateTeam(): BindAndValidate failed, err: %+v", erro)
+		c.JSON(consts.StatusOK, utils.ErrorResp(errWrongReqFmt))
 		return
 	}
 
-	name := ""
 	if req.TeamName == nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "team name should not be empty"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errEmptyTeamName))
 		return
 	}
-	name = template.HTMLEscapeString(*req.TeamName)
-	nameLength := utf8.RuneCountInString(name)
-	if nameLength < 1 || nameLength > contest.MaxTeamNameLength {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "team name too short or too long"))
+	name := strings.TrimSpace(*req.TeamName)
+	if !validateName(&name) {
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInvalidTeamName))
 		return
 	}
 
-	affi := ""
 	if req.TeamAffiliation == nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "team affiliation should not be empty"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errEmptyAffiName))
 		return
 	}
-	affi = template.HTMLEscapeString(*req.TeamAffiliation)
-	affiLength := utf8.RuneCountInString(affi)
-	if affiLength < 1 || affiLength > contest.MaxTeamNameLength {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "team affiliation too short or too long"))
-		return
-	}
-
-	isUsed, err := redis.IsTeamNameUsed(ctx, &name)
-	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
-		return
-	}
-	if isUsed {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "team name is used"))
+	affi := strings.TrimSpace(*req.TeamAffiliation)
+	if !validateName(&affi) {
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInvalidAffiName))
 		return
 	}
 
@@ -81,7 +66,7 @@ func CreateTeam(ctx context.Context, c *app.RequestContext) {
 	}
 	tid, inviteToken, err := rdb.CreateNewTeam(ctx, uid, &newReq)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 
@@ -95,50 +80,52 @@ func CreateTeam(ctx context.Context, c *app.RequestContext) {
 func JoinTeam(ctx context.Context, c *app.RequestContext) {
 	uid, err := getUID(c)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		hlog.Errorf("JoinTeam(): getUID failed, err: %+v", err.Msg())
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInternal))
 		return
 	}
 
 	usrInfo, err := rdb.GetUserInfoByID(ctx, uid)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 	if usrInfo.BelongTeam != 0 {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "user has already joined in a team"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInTeam))
 		return
 	}
 
 	req := model.JoinTeamReq{}
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, err.Error()))
+	erro := c.BindAndValidate(&req)
+	if erro != nil {
+		hlog.Errorf("CreateTeam(): BindAndValidate failed, err: %+v", erro)
+		c.JSON(consts.StatusOK, utils.ErrorResp(errWrongReqFmt))
 		return
 	}
 
-	tid, err := strconv.ParseInt(req.TeamID, 10, 64)
-	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, err.Error()))
+	tid, erro := strconv.ParseInt(req.TeamID, 10, 64)
+	if erro != nil {
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInvalidTeamID))
 		return
 	}
 
 	token, err := rdb.GetTeamInviteTokenByTeamID(ctx, tid)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 	if *token != req.InviteToken {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "invalid invite token or team id"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInvalidInviteToken))
 		return
 	}
 
 	joined, err := rdb.UserJoinTeam(ctx, uid, tid)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 	if !joined {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "cannot join in the team"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errCannotJoin))
 		return
 	}
 	c.JSON(consts.StatusOK, utils.SuccessResp("ok"))
@@ -147,13 +134,14 @@ func JoinTeam(ctx context.Context, c *app.RequestContext) {
 func QuitTeam(ctx context.Context, c *app.RequestContext) {
 	uid, err := getUID(c)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		hlog.Errorf("QuitTeam(): getUID failed, err: %+v", err.Msg())
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInternal))
 		return
 	}
 
 	err = rdb.UserQuitTeam(ctx, uid)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 	c.JSON(consts.StatusOK, utils.SuccessResp("ok"))

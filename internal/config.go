@@ -9,7 +9,6 @@ import (
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/rdb"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/email"
-	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"gopkg.in/yaml.v3"
 )
@@ -37,17 +36,6 @@ func initSrv(conf *config.SrvConfig) string {
 	return fmt.Sprintf(":%d", conf.Port)
 }
 
-var SessionSecret []byte
-
-func initSecret() {
-	x, err := utils.GenSecret(secretTokenLen)
-	if err != nil {
-		hlog.Fatalf("cannot generate secret token, err: %+v", err)
-	}
-
-	SessionSecret = x
-}
-
 func InitConfig(filePath *string) string {
 	conf := initConfigFile(filePath)
 	rdb.Init(conf.RDB)
@@ -55,6 +43,5 @@ func InitConfig(filePath *string) string {
 	email.Init(conf.Email)
 	contest.Init(conf.Contest)
 
-	initSecret()
 	return initSrv(conf.Srv)
 }

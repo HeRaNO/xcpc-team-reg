@@ -2,27 +2,27 @@ package email
 
 import (
 	"context"
-	"errors"
 
+	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 )
 
-func ValidateEmailToken(ctx context.Context, email *string, token *string, action *string) (bool, error) {
+func ValidateEmailToken(ctx context.Context, email *string, token *string, action *string) berrors.Berror {
 	actionFromRedis, err := redis.GetEmailAction(ctx, email)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if actionFromRedis == "" || actionFromRedis != *action {
-		return true, errors.New("action is invalid")
+		return errInvalidType
 	}
 	tokenFromRedis, err := redis.GetEmailToken(ctx, email)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if tokenFromRedis == "" || tokenFromRedis != *token {
-		return true, errors.New("token is invalid")
+		return errInvalidToken
 	}
 	redis.DelEmailToken(ctx, email)
 	redis.DelEmailAction(ctx, email)
-	return true, nil
+	return nil
 }

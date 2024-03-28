@@ -25,11 +25,11 @@ func main() {
 		teamName := fmt.Sprintf("team%03d", i+1)
 		teamPwd, err := utils.GenToken(contest.UserTokenLength)
 		if err != nil {
-			hlog.Fatalf("cannot gen password, err: %s", err.Error())
+			hlog.Fatalf("cannot gen password, err: %s", err.Msg())
 		}
-		err = rdb.SetTeamAccPwdByID(team.TeamID, &teamName, &teamPwd)
-		if err != nil {
-			hlog.Fatalf("update failed, err: %s", err.Error())
+		erro := rdb.SetTeamAccPwdByID(team.TeamID, &teamName, &teamPwd)
+		if erro != nil {
+			hlog.Fatalf("update failed, err: %s", erro.Error())
 		}
 	}
 

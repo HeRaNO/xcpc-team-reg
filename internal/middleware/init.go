@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal"
+	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/hertz-contrib/cors"
 	"github.com/hertz-contrib/logger/accesslog"
 	"github.com/hertz-contrib/sessions"
@@ -22,7 +24,15 @@ func InitMw(h *server.Hertz) {
 		MaxAge:           5 * time.Minute,
 	}))
 
-	storeSession := cookie.NewStore(internal.SessionSecret)
+	hashKey, err := utils.GenSecret(hashKeyLen)
+	if err != nil {
+		hlog.Fatalf("cannot generate hash key, err: %+v", err)
+	}
+	blockKey, err := utils.GenSecret(blockKeyLen)
+	if err != nil {
+		hlog.Fatalf("cannot generate block key, err: %+v", err)
+	}
+	storeSession := cookie.NewStore(hashKey, blockKey)
 	storeSession.Options(sessions.Options{
 		Path:     "/",
 		Domain:   internal.Domain,

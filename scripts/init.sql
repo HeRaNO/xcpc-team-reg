@@ -5,7 +5,7 @@ CREATE DATABASE xcpc_team_reg;
 
 CREATE TABLE t_user (
     user_id      BIGSERIAL PRIMARY KEY,
-    user_name    VARCHAR(50),
+    user_name    VARCHAR(50) NOT NULL,
     email        VARCHAR(50),
     school       INT,
     stu_id       VARCHAR(15),
@@ -24,7 +24,7 @@ CREATE TABLE t_auth (
 
 CREATE TABLE t_team (
     team_id          BIGSERIAL PRIMARY KEY,
-    team_name        VARCHAR(50),
+    team_name        VARCHAR(50) NOT NULL UNIQUE,
     member_cnt       INT,
     team_account     VARCHAR(20),
     team_password    VARCHAR(20),

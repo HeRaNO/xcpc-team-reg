@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal"
+	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/rdb"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/email"
@@ -18,27 +18,27 @@ import (
 	"github.com/hertz-contrib/sessions"
 )
 
-func validateAuthInfo(ctx context.Context, uid int64, e_mail *string, pwdToken *string) (bool, error) {
+func validateAuthInfo(ctx context.Context, uid int64, e_mail *string, pwdToken *string) berrors.Berror {
 	info, err := rdb.GetAuthInfo(ctx, uid)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if info.Email != *e_mail {
-		hlog.Errorf("validateAuthInfo(): user_id in Redis is different from it in rdb")
-		return false, errors.New("data inconsistent")
+		hlog.Errorf("validateAuthInfo(): user_id in redis is different from it in rdb, uid: %d", uid)
+		return errDataInconsistent
 	}
 	if !utils.ValidatePassword(&info.Pwd, pwdToken) {
-		return true, errors.New("wrong password")
+		return errWrongPasswd
 	}
-	return false, nil
+	return nil
 }
 
 func Login(ctx context.Context, c *app.RequestContext) {
 	req := model.UserLoginReq{}
-	err := c.BindAndValidate(&req)
-	if err != nil {
-		hlog.Errorf("Login(): BindAndValidate failed, err: %+v", err)
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, err.Error()))
+	erro := c.BindAndValidate(&req)
+	if erro != nil {
+		hlog.Errorf("Login(): BindAndValidate failed, err: %+v", erro)
+		c.JSON(consts.StatusOK, utils.ErrorResp(errWrongReqFmt))
 		return
 	}
 
@@ -48,42 +48,38 @@ func Login(ctx context.Context, c *app.RequestContext) {
 	} else if req.Email != nil {
 		e_mail = *req.Email
 	} else {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "should choose one method to verify email"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errNoMethod))
 		return
 	}
 
 	uid, err := redis.GetUserIDByEmail(ctx, &e_mail)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 	if uid == 0 {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrWrongInfo, "no such user"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errNoUserRec))
 		return
 	}
 
-	flag, err := validateAuthInfo(ctx, uid, &e_mail, &req.PwdToken)
+	err = validateAuthInfo(ctx, uid, &e_mail, &req.PwdToken)
 	if err != nil {
-		errCode := internal.ErrInternal
-		if flag {
-			errCode = internal.ErrWrongInfo
-		}
-		c.JSON(consts.StatusOK, utils.ErrorResp(errCode, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 
 	sid := uuid.NewString()
 	err = redis.SetSession(ctx, &sid, uid)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 	session := sessions.Default(c)
 	session.Set(internal.SessionName, sid)
-	err = session.Save()
-	if err != nil {
-		hlog.Errorf("Login(): save session failed, err: %+v", err)
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+	erro = session.Save()
+	if erro != nil {
+		hlog.Errorf("Login(): save session failed, err: %+v", erro)
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInternal))
 		return
 	}
 	c.JSON(consts.StatusOK, utils.SuccessResp("ok"))
@@ -94,12 +90,12 @@ func Logout(ctx context.Context, c *app.RequestContext) {
 	sid, ok := session.Get(internal.SessionName).(string)
 	if !ok {
 		hlog.Errorf("Logout(): no id in session")
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, "no id in session"))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInvalidCookies))
 		return
 	}
 	err := redis.DelSession(ctx, &sid)
 	if err != nil {
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
 	}
 	session.Options(sessions.Options{
@@ -111,7 +107,7 @@ func Logout(ctx context.Context, c *app.RequestContext) {
 	})
 	if err := session.Save(); err != nil {
 		hlog.Errorf("Logout(): save session failed, err: %+v", err)
-		c.JSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, err.Error()))
+		c.JSON(consts.StatusOK, utils.ErrorResp(errInternal))
 		return
 	}
 	c.JSON(consts.StatusOK, utils.SuccessResp("ok"))

@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"errors"
 	"html/template"
 	"net/smtp"
 	"time"
 
+	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
@@ -61,51 +61,54 @@ func sendEmail(emailRecv *string, subject *string, content []byte) error {
 	return e.SendWithTLS(smtpHost, auth, &tls.Config{ServerName: smtpAddr})
 }
 
-func SendEmailWithToken(ctx context.Context, email *string, emailType *string) (bool, error) {
+func SendEmailWithToken(ctx context.Context, email *string, emailType *string) berrors.Berror {
 	if _, ok := emailActionMap[*emailType]; !ok {
-		return true, errors.New("unrecognized action")
+		return errInvalidType
 	}
 	uid, err := redis.GetUserIDByEmail(ctx, email)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if *emailType == "register" {
 		if uid != 0 {
-			return true, errors.New("email has already registered")
+			return errAlreadyRegistered
 		}
 	} else {
 		if uid == 0 {
-			return true, errors.New("no such user")
+			return errNoRegisterRecord
 		}
 	}
 
 	err = redis.GetEmailRequest(ctx, email)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	token, err := utils.GenToken(contest.UserTokenLength)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	err = redis.SetEmailToken(ctx, email, &token, emailTokenExpireTime)
 	if err != nil {
-		return false, err
+		return err
 	}
 	err = redis.SetEmailAction(ctx, email, emailType, emailTokenExpireTime)
 	if err != nil {
-		return false, err
+		return err
 	}
 	err = redis.SetEmailRequest(ctx, email, emailSendGapTime)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	content := makeTokenEmail(emailTemplate, &token, emailType)
 	subject := emailSubjectMap[*emailType]
-	err = sendEmail(email, &subject, content)
-	return false, err
+	erro := sendEmail(email, &subject, content)
+	if erro != nil {
+		return berrors.New(berrors.ErrInternal, erro.Error())
+	}
+	return nil
 }
 
 func SendTeamAccountEmail(tmpl *template.Template, name *string, contestName *string, account *string, password *string, usrEmail *string, subject *string) error {

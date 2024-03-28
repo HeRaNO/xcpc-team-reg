@@ -4,19 +4,20 @@ import (
 	"crypto/rand"
 	"math/big"
 
+	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const sigma = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 // Generate a token whose length is `n`
-func GenToken(n int) (string, error) {
+func GenToken(n int) (string, berrors.Berror) {
 	b := make([]byte, n)
 	rng := new(big.Int).SetInt64(int64(len(sigma)))
 	for i := 0; i < n; i++ {
 		idx, err := rand.Int(rand.Reader, rng)
 		if err != nil {
-			return "", err
+			return "", berrors.New(berrors.ErrInternal, err.Error())
 		}
 		b[i] = sigma[idx.Int64()]
 	}

@@ -17,18 +17,18 @@ func Authenticator() app.HandlerFunc {
 		session := sessions.Default(c)
 		v := session.Get(internal.SessionName)
 		if v == nil {
-			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrUnauthorized, "no session found"))
+			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(errNoSession))
 			return
 		}
 		sessionID, ok := v.(string)
 		if !ok {
 			hlog.CtxErrorf(ctx, "session cannot convert to string: %+v", v)
-			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, "internal error"))
+			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(errInternal))
 			return
 		}
 		uid, err := redis.GetSession(ctx, &sessionID)
 		if err != nil || uid == 0 {
-			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrInternal, "internal error"))
+			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(errInternal))
 			return
 		}
 		c.Set("uid", uid)
@@ -41,7 +41,7 @@ func CheckUnauthorized() app.HandlerFunc {
 		session := sessions.Default(c)
 		v := session.Get(internal.SessionName)
 		if v != nil {
-			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(internal.ErrUnauthorized, "login status hasn't expired"))
+			c.AbortWithStatusJSON(consts.StatusOK, utils.ErrorResp(errLoginNotExpired))
 			return
 		}
 		c.Next(ctx)

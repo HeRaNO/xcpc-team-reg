@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"context"
-	"errors"
 
+	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
 	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
 	"github.com/cloudwego/hertz/pkg/app"
@@ -18,14 +18,14 @@ func GetIDSchool(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, utils.SuccessResp(contest.GetIDSchoolMap()))
 }
 
-func getUID(c *app.RequestContext) (int64, error) {
+func getUID(c *app.RequestContext) (int64, berrors.Berror) {
 	v, exist := c.Get("uid")
 	if !exist {
-		return 0, errors.New("uid not exists")
+		return 0, errInvalidCookies
 	}
 	uid, ok := v.(int64)
 	if !ok {
-		return 0, errors.New("uid cannot convert to int64")
+		return 0, errInvalidCookies
 	}
 	return uid, nil
 }

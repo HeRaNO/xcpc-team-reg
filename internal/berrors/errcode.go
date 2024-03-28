@@ -1,4 +1,4 @@
-package internal
+package berrors
 
 const (
 	ErrInternal     = "1000"

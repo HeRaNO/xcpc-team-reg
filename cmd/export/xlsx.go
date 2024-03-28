@@ -39,6 +39,9 @@ func convertToXLSX(info []FullTeamInfo) error {
 			hlog.Fatalf("xlsx close fail, err: %s", err.Error())
 		}
 	}()
+	f.SetDocProps(&excelize.DocProperties{
+		Creator: "UESTC ACM-ICPC Training Team",
+	})
 
 	teamTable := make([][]string, 0)
 	teamTable = append(teamTable, heading)

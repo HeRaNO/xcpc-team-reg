@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/config"
@@ -22,6 +23,9 @@ func Init(conf *config.RedisConfig) {
 	})
 	if redisClient == nil {
 		hlog.Fatal("init Redis failed: redisClient == nil")
+	}
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		hlog.Fatalf("init Redis failed: ping redis failed, err: %+v", err)
 	}
 	hlog.Info("init Redis finished successfully")
 }

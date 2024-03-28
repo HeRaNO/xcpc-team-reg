@@ -43,7 +43,7 @@ func main() {
 	for _, team := range teams {
 		fullTeamInfo, err := rdb.GetTeamInfoByTeamID(ctx, team.TeamID)
 		if err != nil {
-			hlog.Fatalf("cannot get team info, tid: %d, err: %s", team.TeamID, err.Error())
+			hlog.Fatalf("cannot get team info, tid: %d, err: %s", team.TeamID, err.Msg())
 		}
 		isUESTCTeam := true
 		for _, member := range fullTeamInfo.TeamMember {

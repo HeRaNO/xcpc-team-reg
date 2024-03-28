@@ -44,6 +44,7 @@ func convertToJSON(info []FullTeamInfo, useExternalID bool) error {
 	orgs := make([]Organizations, 0)
 	teams := make([]Teams, 0)
 	accounts := make([]Accounts, 0)
+	id_acc_tsv := make([]byte, 0)
 
 	org_cnt := 1
 	org_map := make(map[string]string, 0)
@@ -88,6 +89,7 @@ func convertToJSON(info []FullTeamInfo, useExternalID bool) error {
 			Type:     "team",
 			TeamID:   teamID,
 		})
+		id_acc_tsv = append(id_acc_tsv, fmt.Sprintf("%s\t%s\n", teamID, team.TeamAccount)...)
 	}
 
 	orgb, err := sonic.Marshal(orgs)
@@ -117,5 +119,5 @@ func convertToJSON(info []FullTeamInfo, useExternalID bool) error {
 		return err
 	}
 
-	return nil
+	return os.WriteFile("id_acc.tsv", id_acc_tsv, 0644)
 }

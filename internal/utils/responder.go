@@ -1,11 +1,13 @@
 package utils
 
+import "github.com/HeRaNO/xcpc-team-reg/internal/berrors"
+
 type R map[string]interface{}
 
-func ErrorResp(errcode string, msg string) R {
+func ErrorResp(err berrors.Berror) R {
 	return R{
-		"code": errcode,
-		"msg":  msg,
+		"code": err.Code(),
+		"msg":  err.Msg(),
 	}
 }
 
