@@ -1,8 +1,3 @@
-DROP DATABASE xcpc_team_reg;
-CREATE DATABASE xcpc_team_reg;
-
-\c xcpc_team_reg
-
 CREATE TABLE t_user (
     user_id      BIGSERIAL PRIMARY KEY,
     user_name    VARCHAR(50) NOT NULL,
