@@ -40,7 +40,7 @@ func makeMembers(info []model.UserInfo) string {
 	return strings.Join(names, ", ")
 }
 
-func convertToJSON(info []FullTeamInfo, useExternalID bool) error {
+func convertToJSON(info []FullTeamInfo) error {
 	orgs := make([]Organizations, 0)
 	teams := make([]Teams, 0)
 	accounts := make([]Accounts, 0)
@@ -67,13 +67,10 @@ func convertToJSON(info []FullTeamInfo, useExternalID bool) error {
 	}
 
 	for i, team := range info {
-		teamID := fmt.Sprintf("%d", i+3)
-		if useExternalID {
-			teamID = fmt.Sprintf("team_%03d", i+1)
-		}
-		groupID := "3"
+		teamID := fmt.Sprintf("team_%03d", i+1)
+		groupID := "participants"
 		if !team.IsParticipant {
-			groupID = "4"
+			groupID = "observers"
 		}
 		teams = append(teams, Teams{
 			ID:           teamID,
@@ -89,7 +86,7 @@ func convertToJSON(info []FullTeamInfo, useExternalID bool) error {
 			Type:     "team",
 			TeamID:   teamID,
 		})
-		id_acc_tsv = append(id_acc_tsv, fmt.Sprintf("%s\t%s\n", teamID, team.TeamAccount)...)
+		id_acc_tsv = append(id_acc_tsv, fmt.Sprintf("%s\t%s\n", teamID, team.TeamName)...)
 	}
 
 	orgb, err := sonic.Marshal(orgs)
@@ -119,5 +116,5 @@ func convertToJSON(info []FullTeamInfo, useExternalID bool) error {
 		return err
 	}
 
-	return os.WriteFile("id_acc.tsv", id_acc_tsv, 0644)
+	return os.WriteFile("id_teamName.tsv", id_acc_tsv, 0644)
 }

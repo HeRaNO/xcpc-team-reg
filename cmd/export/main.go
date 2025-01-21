@@ -26,7 +26,6 @@ var idSchoolMap map[int]string
 func main() {
 	initConfigFile := flag.String("c", "./configs/conf.yaml", "the path of configure file")
 	exportForm := flag.String("f", "xlsx", "export form of team info, can be: xlsx and json")
-	useExternalID := flag.Bool("external", false, "use externalID in json, import to DOMJudge")
 	flag.Parse()
 	internal.InitConfig(initConfigFile)
 
@@ -73,7 +72,7 @@ func main() {
 			hlog.Fatalf("cannot gen xlsx file, err: %s", err.Error())
 		}
 	} else if *exportForm == "json" {
-		err := convertToJSON(allTeamInfo, *useExternalID)
+		err := convertToJSON(allTeamInfo)
 		if err != nil {
 			hlog.Fatalf("cannot gen json file, err: %s", err.Error())
 		}
