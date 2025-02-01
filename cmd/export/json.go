@@ -20,6 +20,7 @@ type Teams struct {
 	ID           string   `json:"id"`
 	GroupIDs     []string `json:"group_ids"`
 	Name         string   `json:"name"`
+	DisplayName  string   `json:"display_name"`
 	Members      string   `json:"members"`
 	Organization string   `json:"organization_id"`
 }
@@ -76,6 +77,7 @@ func convertToJSON(info []FullTeamInfo) error {
 			ID:           teamID,
 			GroupIDs:     []string{groupID},
 			Name:         team.TeamName,
+			DisplayName:  team.TeamName,
 			Members:      makeMembers(team.TeamMember),
 			Organization: org_map[team.TeamAffiliation],
 		})
