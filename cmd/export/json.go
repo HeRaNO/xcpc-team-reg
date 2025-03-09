@@ -45,6 +45,7 @@ func convertToJSON(info []FullTeamInfo) error {
 	orgs := make([]Organizations, 0)
 	teams := make([]Teams, 0)
 	accounts := make([]Accounts, 0)
+	id_acc_tsv := make([]byte, 0)
 
 	org_cnt := 1
 	org_map := make(map[string]string, 0)
@@ -86,6 +87,7 @@ func convertToJSON(info []FullTeamInfo) error {
 			Type:     "team",
 			TeamID:   team.TeamAccount,
 		})
+		id_acc_tsv = append(id_acc_tsv, fmt.Sprintf("%s\t%s\n", team.TeamAccount, team.TeamName)...)
 	}
 
 	orgb, err := sonic.Marshal(orgs)
@@ -110,6 +112,10 @@ func convertToJSON(info []FullTeamInfo) error {
 	if err != nil {
 		return err
 	}
+	err = os.WriteFile("accounts.json", accountb, 0644)
+	if err != nil {
+		return err
+	}
 
-	return os.WriteFile("accounts.json", accountb, 0644)
+	return os.WriteFile("id_teamName.tsv", id_acc_tsv, 0644)
 }
