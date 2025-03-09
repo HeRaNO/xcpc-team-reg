@@ -8,7 +8,7 @@ import (
 )
 
 var heading = []string{
-	"队伍编号",
+	"编号",
 	"队伍名称",
 	"队伍组织",
 	"是否为本校队伍",
@@ -45,9 +45,9 @@ func convertToXLSX(info []FullTeamInfo) error {
 
 	teamTable := make([][]string, 0)
 	teamTable = append(teamTable, heading)
-	for _, team := range info {
+	for i, team := range info {
 		teamInfo := make([]string, 0)
-		teamInfo = append(teamInfo, fmt.Sprintf("%d", team.TeamID))
+		teamInfo = append(teamInfo, fmt.Sprintf("%d", i+1))
 		teamInfo = append(teamInfo, team.TeamName)
 		teamInfo = append(teamInfo, team.TeamAffiliation)
 		isUESTCTeam := "是"

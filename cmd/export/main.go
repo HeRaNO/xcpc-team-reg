@@ -12,7 +12,6 @@ import (
 )
 
 type FullTeamInfo struct {
-	TeamID          int64
 	TeamName        string
 	TeamAccount     string
 	TeamPassword    string
@@ -55,7 +54,6 @@ func main() {
 			fullTeamInfo.TeamAffiliation = "UESTC"
 		}
 		teamInfo := FullTeamInfo{
-			TeamID:          fullTeamInfo.TeamID,
 			TeamName:        fullTeamInfo.TeamName,
 			TeamAccount:     fullTeamInfo.TeamAccount,
 			TeamPassword:    fullTeamInfo.TeamPassword,

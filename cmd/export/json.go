@@ -45,7 +45,6 @@ func convertToJSON(info []FullTeamInfo) error {
 	orgs := make([]Organizations, 0)
 	teams := make([]Teams, 0)
 	accounts := make([]Accounts, 0)
-	id_acc_tsv := make([]byte, 0)
 
 	org_cnt := 1
 	org_map := make(map[string]string, 0)
@@ -68,13 +67,12 @@ func convertToJSON(info []FullTeamInfo) error {
 	}
 
 	for i, team := range info {
-		teamID := fmt.Sprintf("team_%03d", i+1)
 		groupID := "participants"
 		if !team.IsParticipant {
 			groupID = "observers"
 		}
 		teams = append(teams, Teams{
-			ID:           teamID,
+			ID:           team.TeamAccount,
 			GroupIDs:     []string{groupID},
 			Name:         team.TeamName,
 			DisplayName:  team.TeamName,
@@ -86,9 +84,8 @@ func convertToJSON(info []FullTeamInfo) error {
 			Username: team.TeamAccount,
 			Password: team.TeamPassword,
 			Type:     "team",
-			TeamID:   teamID,
+			TeamID:   team.TeamAccount,
 		})
-		id_acc_tsv = append(id_acc_tsv, fmt.Sprintf("%s\t%s\n", teamID, team.TeamName)...)
 	}
 
 	orgb, err := sonic.Marshal(orgs)
@@ -113,10 +110,6 @@ func convertToJSON(info []FullTeamInfo) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile("accounts.json", accountb, 0644)
-	if err != nil {
-		return err
-	}
 
-	return os.WriteFile("id_teamName.tsv", id_acc_tsv, 0644)
+	return os.WriteFile("accounts.json", accountb, 0644)
 }
