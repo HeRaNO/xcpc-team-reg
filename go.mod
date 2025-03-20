@@ -10,7 +10,7 @@ require (
 	github.com/hertz-contrib/logger/accesslog v0.0.0-20241107070745-e4ce8c54dd97
 	github.com/hertz-contrib/sessions v1.0.3
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
-	github.com/redis/go-redis/v9 v9.7.0
+	github.com/redis/go-redis/v9 v9.7.3
 	github.com/xuri/excelize/v2 v2.9.0
 	golang.org/x/crypto v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
