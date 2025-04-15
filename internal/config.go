@@ -10,22 +10,22 @@ import (
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/email"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 )
+
+var Domain string
 
 func initConfigFile(filePath *string) *config.Configure {
 	fileBytes, err := os.ReadFile(*filePath)
 	if err != nil {
 		hlog.Fatalf("read config file failed, err: %+v", err)
 	}
-	var conf *config.Configure
+	conf := config.Configure{}
 	if err = yaml.Unmarshal(fileBytes, &conf); err != nil {
 		hlog.Fatalf("unmarshal yaml file failed, err: %+v", err)
 	}
-	return conf
+	return &conf
 }
-
-var Domain string
 
 func initSrv(conf *config.SrvConfig) string {
 	if conf == nil {

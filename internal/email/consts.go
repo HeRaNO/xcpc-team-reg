@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
+	"github.com/wneessen/go-mail"
 )
 
 const (
@@ -13,10 +14,9 @@ const (
 	stuEmailSuffix       = "@std.uestc.edu.cn"
 )
 
-var smtpAddr, smtpHost string
-var smtpPort int
-var emailSign, emailAddr, emailPassword, emailAlias, emailFrom string
+var emailFrom, emailSign string
 var emailTemplate *template.Template
+var client *mail.Client
 
 var emailActionMap = map[string]string{
 	"register": "注册账户",

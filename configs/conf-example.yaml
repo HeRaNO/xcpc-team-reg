@@ -13,6 +13,7 @@ Server:
 Email:
   SMTPAddr: "smtp.example.com"
   SMTPPort: 465
+# SMTPEncMethod: "ssl" # ssl | tls
   EmailSign: "UESTC ACM-ICPC Training Team"
   EmailAlias: "noreply"
   EmailAddr: "noreply@example.com"

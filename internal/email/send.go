@@ -3,16 +3,14 @@ package email
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"html/template"
-	"net/smtp"
 	"time"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
-	"github.com/jordan-wright/email"
+	"github.com/wneessen/go-mail"
 )
 
 func makeTokenEmail(tmpl *template.Template, token *string, method *string) []byte {
@@ -50,15 +48,17 @@ func makeTeamAccountEmail(tmpl *template.Template, name *string, contestName *st
 }
 
 func sendEmail(emailRecv *string, subject *string, content []byte) error {
-	e := &email.Email{
-		To:      []string{*emailRecv},
-		From:    emailFrom,
-		Subject: *subject,
-		HTML:    content,
+	message := mail.NewMsg()
+	if err := message.From(emailFrom); err != nil {
+		return err
 	}
+	if err := message.To(*emailRecv); err != nil {
+		return err
+	}
+	message.Subject(*subject)
+	message.SetBodyString(mail.TypeTextHTML, string(content))
 
-	auth := smtp.PlainAuth("", emailAddr, emailPassword, smtpAddr)
-	return e.SendWithTLS(smtpHost, auth, &tls.Config{ServerName: smtpAddr})
+	return client.DialAndSend(message)
 }
 
 func SendEmailWithToken(ctx context.Context, email *string, emailType *string) berrors.Berror {

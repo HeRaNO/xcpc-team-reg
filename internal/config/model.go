@@ -29,6 +29,7 @@ type SrvConfig struct {
 type EmailConfig struct {
 	SMTPAddr      string `yaml:"SMTPAddr"`
 	SMTPPort      int    `yaml:"SMTPPort"`
+	SMTPEncMethod string `yaml:"SMTPEncMethod"`
 	EmailAddr     string `yaml:"EmailAddr"`
 	EmailPassword string `yaml:"EmailPassword"`
 	EmailSign     string `yaml:"EmailSign"`
