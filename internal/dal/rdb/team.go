@@ -118,8 +118,8 @@ func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*model.TeamInfo, berro
 }
 
 func GetTeamInviteTokenByTeamID(ctx context.Context, tid int64) (*string, berrors.Berror) {
-	ori := map[string]interface{}{}
-	result := db.WithContext(ctx).Table(tableTeamInfo).Select("invite_token").Where("team_id = ?", tid).Find(&ori)
+	token := ""
+	result := db.WithContext(ctx).Table(tableTeamInfo).Select("invite_token").Where("team_id = ?", tid).Scan(&token)
 
 	if result.Error != nil {
 		hlog.Errorf("GetTeamInviteTokenByTeamID(): query failed, err: %s", result.Error)
@@ -129,8 +129,6 @@ func GetTeamInviteTokenByTeamID(ctx context.Context, tid int64) (*string, berror
 		hlog.Infof("GetTeamInviteTokenByTeamID(): no team record, tid: %d", tid)
 		return nil, errNoTeamRecord
 	}
-
-	token := ori["invite_token"].(string)
 
 	return &token, nil
 }
@@ -160,7 +158,7 @@ func GetAllTeams() ([]model.Team, error) {
 	return teams, nil
 }
 
-func SetTeamAccPwdByID(tid int64, acc *string, pwd *string) error {
+func SetTeamAccPwdByID(tid int64, acc, pwd *string) error {
 	accPwd := &model.Team{
 		TeamAccount:  *acc,
 		TeamPassword: *pwd,

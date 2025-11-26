@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
@@ -12,7 +13,7 @@ import (
 func GetSession(ctx context.Context, sid *string) (int64, berrors.Berror) {
 	key := makeSessionKey(sid)
 	ret, err := redisClient.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		hlog.Infof("GetSession(): key is nil, sid: %d", sid)
 		return 0, nil
 	} else if err != nil {

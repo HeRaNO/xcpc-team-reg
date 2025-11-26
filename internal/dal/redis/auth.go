@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
@@ -12,7 +13,7 @@ import (
 func GetUserIDByEmail(ctx context.Context, email *string) (int64, berrors.Berror) {
 	key := makeEmailUserIDKey(email)
 	ret, err := redisClient.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		hlog.Infof("GetUserIDByEmail(): key is nil, email: %s", *email)
 		return 0, nil
 	} else if err != nil {

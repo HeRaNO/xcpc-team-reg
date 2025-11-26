@@ -10,7 +10,7 @@ import (
 
 const sigma = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-// Generate a token whose length is `n`
+// GenToken generates a token whose length is `n`.
 func GenToken(n int) (string, berrors.Berror) {
 	b := make([]byte, n)
 	rng := new(big.Int).SetInt64(int64(len(sigma)))
@@ -24,7 +24,7 @@ func GenToken(n int) (string, berrors.Berror) {
 	return string(b), nil
 }
 
-// Generate a bytes-secret whose length is `n`
+// GenSecret generates a bytes-secret whose length is `n`.
 func GenSecret(n int) ([]byte, error) {
 	b := make([]byte, n)
 	rng := new(big.Int).SetInt64(256)
@@ -47,7 +47,7 @@ func HashPassword(pwd *string) (*string, error) {
 	return &hashStr, nil
 }
 
-func ValidatePassword(hashedPwd *string, plainPwd *string) bool {
+func ValidatePassword(hashedPwd, plainPwd *string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(*hashedPwd), []byte(*plainPwd))
 	return err == nil
 }

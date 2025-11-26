@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
@@ -12,7 +13,7 @@ import (
 func GetEmailToken(ctx context.Context, email *string) (string, berrors.Berror) {
 	key := makeEmailTokenKey(email)
 	ret, err := redisClient.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		hlog.Infof("GetEmailToken(): key is nil, email: %s", *email)
 		return "", nil
 	} else if err != nil {
@@ -22,7 +23,7 @@ func GetEmailToken(ctx context.Context, email *string) (string, berrors.Berror) 
 	return ret, nil
 }
 
-func SetEmailToken(ctx context.Context, email *string, token *string, exptime time.Duration) berrors.Berror {
+func SetEmailToken(ctx context.Context, email, token *string, exptime time.Duration) berrors.Berror {
 	key := makeEmailTokenKey(email)
 	err := redisClient.Set(ctx, key, *token, exptime).Err()
 	if err != nil {
@@ -45,7 +46,7 @@ func DelEmailToken(ctx context.Context, email *string) berrors.Berror {
 func GetEmailRequest(ctx context.Context, email *string) berrors.Berror {
 	key := makeEmailRequestKey(email)
 	err := redisClient.Get(ctx, key).Err()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil
 	} else if err != nil {
 		hlog.Errorf("GetEmailRequest(): redis query error, err: %+v", err)
@@ -67,7 +68,7 @@ func SetEmailRequest(ctx context.Context, email *string, exptime time.Duration) 
 func GetEmailAction(ctx context.Context, email *string) (string, berrors.Berror) {
 	key := makeEmailActionKey(email)
 	ret, err := redisClient.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return "", nil
 	} else if err != nil {
 		hlog.Errorf("GetEmailRequest(): redis query error, err: %+v", err)
@@ -76,7 +77,7 @@ func GetEmailAction(ctx context.Context, email *string) (string, berrors.Berror)
 	return ret, nil
 }
 
-func SetEmailAction(ctx context.Context, email *string, action *string, exptime time.Duration) berrors.Berror {
+func SetEmailAction(ctx context.Context, email, action *string, exptime time.Duration) berrors.Berror {
 	key := makeEmailActionKey(email)
 	err := redisClient.Set(ctx, key, *action, exptime).Err()
 	if err != nil {

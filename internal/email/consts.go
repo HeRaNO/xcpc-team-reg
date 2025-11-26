@@ -14,9 +14,11 @@ const (
 	stuEmailSuffix       = "@std.uestc.edu.cn"
 )
 
-var emailFrom, emailSign string
-var emailTemplate *template.Template
-var client *mail.Client
+var (
+	emailFrom, emailSign string
+	emailTemplate        *template.Template
+	client               *mail.Client
+)
 
 var emailActionMap = map[string]string{
 	"register": "注册账户",

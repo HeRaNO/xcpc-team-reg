@@ -21,21 +21,21 @@ func SendValidationEmail(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	e_mail := ""
+	eMail := ""
 	if req.StuID != nil {
 		if !contest.IsValidStuID(req.StuID) {
 			c.JSON(consts.StatusOK, utils.ErrorResp(errInvalidStuID))
 			return
 		}
-		e_mail = email.MakeStuEmail(req.StuID)
+		eMail = email.MakeStuEmail(req.StuID)
 	} else if req.Email != nil {
-		e_mail = *req.Email
+		eMail = *req.Email
 	} else {
 		c.JSON(consts.StatusOK, utils.ErrorResp(errNoMethod))
 		return
 	}
 
-	err := email.SendEmailWithToken(ctx, &e_mail, &req.Type)
+	err := email.SendEmailWithToken(ctx, &eMail, &req.Type)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return

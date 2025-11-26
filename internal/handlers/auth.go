@@ -18,12 +18,12 @@ import (
 	"github.com/hertz-contrib/sessions"
 )
 
-func validateAuthInfo(ctx context.Context, uid int64, e_mail *string, pwdToken *string) berrors.Berror {
+func validateAuthInfo(ctx context.Context, uid int64, eMail, pwdToken *string) berrors.Berror {
 	info, err := rdb.GetAuthInfo(ctx, uid)
 	if err != nil {
 		return err
 	}
-	if info.Email != *e_mail {
+	if info.Email != *eMail {
 		hlog.Errorf("validateAuthInfo(): user_id in redis is different from it in rdb, uid: %d", uid)
 		return errDataInconsistent
 	}
@@ -42,17 +42,17 @@ func Login(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	e_mail := ""
+	eMail := ""
 	if req.StuID != nil {
-		e_mail = email.MakeStuEmail(req.StuID)
+		eMail = email.MakeStuEmail(req.StuID)
 	} else if req.Email != nil {
-		e_mail = *req.Email
+		eMail = *req.Email
 	} else {
 		c.JSON(consts.StatusOK, utils.ErrorResp(errNoMethod))
 		return
 	}
 
-	uid, err := redis.GetUserIDByEmail(ctx, &e_mail)
+	uid, err := redis.GetUserIDByEmail(ctx, &eMail)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
@@ -62,7 +62,7 @@ func Login(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	err = validateAuthInfo(ctx, uid, &e_mail, &req.PwdToken)
+	err = validateAuthInfo(ctx, uid, &eMail, &req.PwdToken)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return

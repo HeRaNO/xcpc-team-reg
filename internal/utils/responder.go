@@ -2,7 +2,7 @@ package utils
 
 import "github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 
-type R map[string]interface{}
+type R map[string]any
 
 func ErrorResp(err berrors.Berror) R {
 	return R{
@@ -11,13 +11,13 @@ func ErrorResp(err berrors.Berror) R {
 	}
 }
 
-func SuccessResp(data interface{}) R {
+func SuccessResp(data any) R {
 	resp := R{
 		"code": "0",
 		"msg":  "success",
 	}
 	if data == nil {
-		resp["data"] = []interface{}{}
+		resp["data"] = []any{}
 	} else {
 		resp["data"] = data
 	}

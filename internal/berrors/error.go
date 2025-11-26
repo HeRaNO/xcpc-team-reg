@@ -10,7 +10,7 @@ type berrorStruct struct {
 	s string
 }
 
-func New(code string, msg string) Berror {
+func New(code, msg string) Berror {
 	return &berrorStruct{
 		c: code,
 		s: msg,

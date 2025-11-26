@@ -64,17 +64,18 @@ func main() {
 		allTeamInfo = append(allTeamInfo, teamInfo)
 	}
 
-	if *exportForm == "xlsx" {
+	switch *exportForm {
+	case "xlsx":
 		err := convertToXLSX(allTeamInfo)
 		if err != nil {
 			hlog.Fatalf("cannot gen xlsx file, err: %s", err.Error())
 		}
-	} else if *exportForm == "json" {
+	case "json":
 		err := convertToJSON(allTeamInfo)
 		if err != nil {
 			hlog.Fatalf("cannot gen json file, err: %s", err.Error())
 		}
-	} else {
+	default:
 		hlog.Fatalf("unexpected form: %s", *exportForm)
 	}
 

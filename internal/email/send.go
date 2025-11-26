@@ -13,9 +13,9 @@ import (
 	"github.com/wneessen/go-mail"
 )
 
-func makeTokenEmail(tmpl *template.Template, token *string, method *string) []byte {
+func makeTokenEmail(tmpl *template.Template, token, method *string) ([]byte, error) {
 	content := new(bytes.Buffer)
-	tmpl.Execute(content, struct {
+	err := tmpl.Execute(content, struct {
 		Action string
 		Time   string
 		Token  string
@@ -26,12 +26,15 @@ func makeTokenEmail(tmpl *template.Template, token *string, method *string) []by
 		Token:  *token,
 		Sign:   emailSign,
 	})
-	return content.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
 }
 
-func makeTeamAccountEmail(tmpl *template.Template, name *string, contestName *string, account *string, password *string) []byte {
+func makeTeamAccountEmail(tmpl *template.Template, name, contestName, account, password *string) ([]byte, error) {
 	content := new(bytes.Buffer)
-	tmpl.Execute(content, struct {
+	err := tmpl.Execute(content, struct {
 		Name         string
 		ContestName  string
 		TeamAccount  string
@@ -44,10 +47,13 @@ func makeTeamAccountEmail(tmpl *template.Template, name *string, contestName *st
 		TeamPassword: *password,
 		Sign:         emailSign,
 	})
-	return content.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
 }
 
-func sendEmail(emailRecv *string, subject *string, content []byte) error {
+func sendEmail(emailRecv, subject *string, content []byte) error {
 	message := mail.NewMsg()
 	if err := message.From(emailFrom); err != nil {
 		return err
@@ -61,7 +67,7 @@ func sendEmail(emailRecv *string, subject *string, content []byte) error {
 	return client.DialAndSend(message)
 }
 
-func SendEmailWithToken(ctx context.Context, email *string, emailType *string) berrors.Berror {
+func SendEmailWithToken(ctx context.Context, email, emailType *string) berrors.Berror {
 	if _, ok := emailActionMap[*emailType]; !ok {
 		return errInvalidType
 	}
@@ -102,16 +108,22 @@ func SendEmailWithToken(ctx context.Context, email *string, emailType *string) b
 		return err
 	}
 
-	content := makeTokenEmail(emailTemplate, &token, emailType)
+	content, erro := makeTokenEmail(emailTemplate, &token, emailType)
+	if erro != nil {
+		return berrors.New(berrors.ErrInternal, erro.Error())
+	}
 	subject := emailSubjectMap[*emailType]
-	erro := sendEmail(email, &subject, content)
+	erro = sendEmail(email, &subject, content)
 	if erro != nil {
 		return berrors.New(berrors.ErrInternal, erro.Error())
 	}
 	return nil
 }
 
-func SendTeamAccountEmail(tmpl *template.Template, name *string, contestName *string, account *string, password *string, usrEmail *string, subject *string) error {
-	content := makeTeamAccountEmail(tmpl, name, contestName, account, password)
+func SendTeamAccountEmail(tmpl *template.Template, name, contestName, account, password, usrEmail, subject *string) error {
+	content, err := makeTeamAccountEmail(tmpl, name, contestName, account, password)
+	if err != nil {
+		return err
+	}
 	return sendEmail(usrEmail, subject, content)
 }

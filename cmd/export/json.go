@@ -45,24 +45,24 @@ func convertToJSON(info []FullTeamInfo) error {
 	orgs := make([]Organizations, 0)
 	teams := make([]Teams, 0)
 	accounts := make([]Accounts, 0)
-	id_acc_tsv := make([]byte, 0)
+	idAccTsv := make([]byte, 0)
 
-	org_cnt := 1
-	org_map := make(map[string]string, 0)
+	orgCnt := 1
+	orgMap := make(map[string]string, 0)
 
 	for _, team := range info {
-		_, ok := org_map[team.TeamAffiliation]
+		_, ok := orgMap[team.TeamAffiliation]
 		if !ok {
-			org_map[team.TeamAffiliation] = fmt.Sprintf("org_%d", org_cnt)
-			org_cnt++
+			orgMap[team.TeamAffiliation] = fmt.Sprintf("org_%d", orgCnt)
+			orgCnt++
 		}
 	}
 
-	for org_name, org_id := range org_map {
+	for orgName, orgID := range orgMap {
 		orgs = append(orgs, Organizations{
-			ID:         org_id,
-			Name:       org_name,
-			FormalName: org_name,
+			ID:         orgID,
+			Name:       orgName,
+			FormalName: orgName,
 			Country:    "CHN",
 		})
 	}
@@ -78,7 +78,7 @@ func convertToJSON(info []FullTeamInfo) error {
 			Name:         team.TeamName,
 			DisplayName:  team.TeamName,
 			Members:      makeMembers(team.TeamMember),
-			Organization: org_map[team.TeamAffiliation],
+			Organization: orgMap[team.TeamAffiliation],
 		})
 		accounts = append(accounts, Accounts{
 			ID:       fmt.Sprintf("account_%03d", i+1),
@@ -87,14 +87,14 @@ func convertToJSON(info []FullTeamInfo) error {
 			Type:     "team",
 			TeamID:   team.TeamAccount,
 		})
-		id_acc_tsv = append(id_acc_tsv, fmt.Sprintf("%s\t%s\n", team.TeamAccount, team.TeamName)...)
+		idAccTsv = append(idAccTsv, fmt.Sprintf("%s\t%s\n", team.TeamAccount, team.TeamName)...)
 	}
 
 	orgb, err := sonic.Marshal(orgs)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile("organizations.json", orgb, 0644)
+	err = os.WriteFile("organizations.json", orgb, 0o644)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func convertToJSON(info []FullTeamInfo) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile("teams.json", teamb, 0644)
+	err = os.WriteFile("teams.json", teamb, 0o644)
 	if err != nil {
 		return err
 	}
@@ -112,10 +112,10 @@ func convertToJSON(info []FullTeamInfo) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile("accounts.json", accountb, 0644)
+	err = os.WriteFile("accounts.json", accountb, 0o644)
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile("id_teamName.tsv", id_acc_tsv, 0644)
+	return os.WriteFile("id_teamName.tsv", idAccTsv, 0o644)
 }

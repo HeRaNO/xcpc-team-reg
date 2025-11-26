@@ -7,13 +7,15 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 )
 
-var name, note string
-var startTime, endTime time.Time
-var startTimeStr, endTimeStr string
-var idSchoolMap map[int]string
-var validStuIDLength map[int]bool
-var validTshirtSize map[string]bool
-var tshirtSize []string
+var (
+	name, note               string
+	startTime, endTime       time.Time
+	startTimeStr, endTimeStr string
+	idSchoolMap              map[int]string
+	validStuIDLength         map[int]bool
+	validTshirtSize          map[string]bool
+	tshirtSize               []string
+)
 
 func Init(conf *config.ContestConfig) {
 	if conf == nil {

@@ -9,9 +9,9 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 )
 
-func UserJoinTeam(ctx context.Context, uid int64, tid int64) (bool, berrors.Berror) {
-	ori := map[string]interface{}{}
-	result := db.WithContext(ctx).Table(tableTeamInfo).Select("member_cnt").Where("team_id = ?", tid).Find(&ori)
+func UserJoinTeam(ctx context.Context, uid, tid int64) (bool, berrors.Berror) {
+	nowCnt := 0
+	result := db.WithContext(ctx).Table(tableTeamInfo).Select("member_cnt").Where("team_id = ?", tid).Scan(&nowCnt)
 
 	if result.Error != nil {
 		hlog.Errorf("UserJoinTeam(): query member cnt failed, err: %+v", result.Error)
@@ -22,7 +22,6 @@ func UserJoinTeam(ctx context.Context, uid int64, tid int64) (bool, berrors.Berr
 		return false, errNoTeamRecord
 	}
 
-	nowCnt := ori["member_cnt"].(int32)
 	if nowCnt == contest.MaxTeamMember {
 		return false, nil
 	}

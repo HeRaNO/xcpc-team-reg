@@ -39,9 +39,12 @@ func convertToXLSX(info []FullTeamInfo) error {
 			hlog.Fatalf("xlsx close fail, err: %s", err.Error())
 		}
 	}()
-	f.SetDocProps(&excelize.DocProperties{
+	err := f.SetDocProps(&excelize.DocProperties{
 		Creator: "UESTC ACM-ICPC Training Team",
 	})
+	if err != nil {
+		hlog.Fatalf("cannot set creator, err: %s", err.Error())
+	}
 
 	teamTable := make([][]string, 0)
 	teamTable = append(teamTable, heading)
@@ -73,7 +76,7 @@ func convertToXLSX(info []FullTeamInfo) error {
 		}
 	}
 
-	err := f.SaveAs("team_export.xlsx")
+	err = f.SaveAs("team_export.xlsx")
 	if err != nil {
 		hlog.Fatalf("save file failed, err: %s", err.Error())
 	}

@@ -39,8 +39,8 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	}
 
 	stuID := ""
-	e_mail := ""
-	is_uestc_stu := 0
+	eMail := ""
+	isUestcStu := 0
 
 	if req.StuID != nil {
 		if !contest.IsValidStuID(req.StuID) {
@@ -48,16 +48,16 @@ func Register(ctx context.Context, c *app.RequestContext) {
 			return
 		}
 		stuID = *req.StuID
-		e_mail = email.MakeStuEmail(req.StuID)
-		is_uestc_stu = 1
+		eMail = email.MakeStuEmail(req.StuID)
+		isUestcStu = 1
 	} else if req.Email != nil {
-		e_mail = *req.Email
+		eMail = *req.Email
 	} else {
 		c.JSON(consts.StatusOK, utils.ErrorResp(errNoMethod))
 		return
 	}
 
-	uid, err := redis.GetUserIDByEmail(ctx, &e_mail)
+	uid, err := redis.GetUserIDByEmail(ctx, &eMail)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
@@ -67,7 +67,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	err = email.ValidateEmailToken(ctx, &e_mail, &req.EmailToken, &req.Action)
+	err = email.ValidateEmailToken(ctx, &eMail, &req.EmailToken, &req.Action)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
@@ -83,11 +83,11 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	regReq := rdb.UserRegInfo{
 		Name:       name,
 		School:     req.School,
-		Email:      e_mail,
+		Email:      eMail,
 		StuID:      stuID,
 		Tshirt:     req.Tshirt,
 		PwdToken:   *pwdHashed,
-		IsUESTCStu: is_uestc_stu,
+		IsUESTCStu: isUestcStu,
 	}
 
 	if err := rdb.CreateNewUser(ctx, &regReq); err != nil {
@@ -107,17 +107,17 @@ func ForgotPwd(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	e_mail := ""
+	eMail := ""
 	if req.StuID != nil {
-		e_mail = email.MakeStuEmail(req.StuID)
+		eMail = email.MakeStuEmail(req.StuID)
 	} else if req.Email != nil {
-		e_mail = *req.Email
+		eMail = *req.Email
 	} else {
 		c.JSON(consts.StatusOK, utils.ErrorResp(errNoMethod))
 		return
 	}
 
-	uid, err := redis.GetUserIDByEmail(ctx, &e_mail)
+	uid, err := redis.GetUserIDByEmail(ctx, &eMail)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
@@ -127,7 +127,7 @@ func ForgotPwd(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	err = email.ValidateEmailToken(ctx, &e_mail, &req.EmailToken, &req.Action)
+	err = email.ValidateEmailToken(ctx, &eMail, &req.EmailToken, &req.Action)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return

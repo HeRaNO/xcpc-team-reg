@@ -72,7 +72,7 @@ func main() {
 	wg.Wait()
 
 	failedIDs := make([]int64, 0)
-	failed.Range(func(key, value interface{}) bool {
+	failed.Range(func(key, value any) bool {
 		failedIDs = append(failedIDs, key.(int64))
 		return true
 	})
