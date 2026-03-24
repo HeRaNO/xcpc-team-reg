@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"strconv"
+	"time"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
@@ -18,9 +20,18 @@ type FullTeamInfo struct {
 	TeamMember      []model.UserInfo
 	TeamAffiliation string
 	IsParticipant   bool
+	IsFreshman      bool
 }
 
 var idSchoolMap map[int]string
+
+func isFreshman(id string) bool {
+	if len(id) != 13 {
+		return false
+	}
+	currentYearStr := strconv.Itoa(time.Now().Year() - 1)
+	return id[:4] == currentYearStr
+}
 
 func main() {
 	initConfigFile := flag.String("c", "./configs/conf.yaml", "the path of configure file")
@@ -44,6 +55,7 @@ func main() {
 			hlog.Fatalf("cannot get team info, tid: %d, err: %s", team.TeamID, err.Msg())
 		}
 		isUESTCTeam := true
+		isFreshmanTeam := false
 		for _, member := range fullTeamInfo.TeamMember {
 			if member.IsUESTCStu != 1 {
 				isUESTCTeam = false
@@ -52,6 +64,13 @@ func main() {
 		}
 		if isUESTCTeam {
 			fullTeamInfo.TeamAffiliation = "UESTC"
+			isFreshmanTeam = true
+			for _, member := range fullTeamInfo.TeamMember {
+				if !isFreshman(member.StuID) {
+					isFreshmanTeam = false
+					break
+				}
+			}
 		}
 		teamInfo := FullTeamInfo{
 			TeamName:        fullTeamInfo.TeamName,
@@ -60,6 +79,7 @@ func main() {
 			TeamMember:      fullTeamInfo.TeamMember,
 			TeamAffiliation: fullTeamInfo.TeamAffiliation,
 			IsParticipant:   isUESTCTeam,
+			IsFreshman:      isFreshmanTeam,
 		}
 		allTeamInfo = append(allTeamInfo, teamInfo)
 	}

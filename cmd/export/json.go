@@ -71,6 +71,8 @@ func convertToJSON(info []FullTeamInfo) error {
 		groupID := "participants"
 		if !team.IsParticipant {
 			groupID = "observers"
+		} else if team.IsFreshman {
+			groupID = "freshmen"
 		}
 		teams = append(teams, Teams{
 			ID:           team.TeamAccount,
