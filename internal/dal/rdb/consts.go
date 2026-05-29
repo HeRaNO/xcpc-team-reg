@@ -11,6 +11,8 @@ const (
 var (
 	errDB             = berrors.New(berrors.ErrInternal, "database error")
 	errDuplicatedName = berrors.New(berrors.ErrWrongInfo, "team name has already been used")
+	errDuplicatedUser = berrors.New(berrors.ErrWrongInfo, "email has already been registered")
+	errAlreadyInTeam  = berrors.New(berrors.ErrWrongInfo, "user has already joined in a team")
 	errNoTeamRecord   = berrors.New(berrors.ErrWrongInfo, "no team record")
 	errNoUserRecord   = berrors.New(berrors.ErrWrongInfo, "no user record")
 	errNotInATeam     = berrors.New(berrors.ErrWrongInfo, "user is not in a team")

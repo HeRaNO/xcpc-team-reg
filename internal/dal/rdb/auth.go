@@ -2,23 +2,26 @@ package rdb
 
 import (
 	"context"
+	"errors"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
-	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/pkg/model"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"gorm.io/gorm"
 )
 
 func AddAuthInfo(ctx context.Context, info *model.Auth) berrors.Berror {
-	err := redis.SetEmailUserID(ctx, info.UserID, &info.Email)
+	err := db.WithContext(ctx).Model(&model.Auth{}).Table(tableAuthInfo).Create(info).Error
 	if err != nil {
-		return err
-	}
-	erro := db.WithContext(ctx).Model(&model.Auth{}).Table(tableAuthInfo).Create(info).Error
-	if erro != nil {
-		hlog.Errorf("AddAuthInfo(): create failed, err: %+v", erro)
-		redis.DelEmailUserID(ctx, &info.Email)
+		hlog.Errorf("AddAuthInfo(): create failed, err: %+v", err)
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return errDuplicatedUser
+		}
 		return errDB
+	}
+
+	if err := syncEmailUserIDCache(ctx, info.UserID, &info.Email); err != nil {
+		hlog.Errorf("AddAuthInfo(): sync email cache failed, uid: %d, email: %s, err: %+v", info.UserID, info.Email, err)
 	}
 	return nil
 }

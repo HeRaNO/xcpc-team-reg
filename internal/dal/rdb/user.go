@@ -2,14 +2,22 @@ package rdb
 
 import (
 	"context"
+	"errors"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
+	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/pkg/model"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"gorm.io/gorm"
 )
 
 func CreateNewUser(ctx context.Context, usr *UserRegInfo) berrors.Berror {
 	trans := db.Begin()
+	if trans.Error != nil {
+		hlog.Errorf("CreateNewUser(): begin trans failed, err: %+v", trans.Error)
+		return errDB
+	}
+
 	info := model.User{
 		Name:       usr.Name,
 		Email:      usr.Email,
@@ -22,24 +30,74 @@ func CreateNewUser(ctx context.Context, usr *UserRegInfo) berrors.Berror {
 	if err != nil {
 		hlog.Errorf("CreateNewUser(): create trans failed, err: %+v", err)
 		trans.WithContext(ctx).Rollback()
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return errDuplicatedUser
+		}
 		return errDB
 	}
+
 	uid := info.UserID
-	authInfo := model.Auth{
+
+	authInfo := &model.Auth{
 		UserID: uid,
 		Email:  usr.Email,
 		Pwd:    usr.PwdToken,
 	}
-	errAuth := AddAuthInfo(ctx, &authInfo)
-	if errAuth != nil {
+	err = trans.WithContext(ctx).Model(&model.Auth{}).Table(tableAuthInfo).Create(authInfo).Error
+	if err != nil {
+		hlog.Errorf("CreateNewUser(): create auth trans failed, err: %+v", err)
 		trans.WithContext(ctx).Rollback()
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return errDuplicatedUser
+		}
 		return errDB
 	}
+
 	if err := trans.Commit().Error; nil != err {
 		hlog.Errorf("CreateNewUser(): transaction failed, err: %+v", err)
 		return errDB
 	}
+
+	if err := syncEmailUserIDCache(ctx, uid, &usr.Email); err != nil {
+		hlog.Errorf("CreateNewUser(): sync email cache failed after commit, uid: %d, email: %s, err: %+v", uid, usr.Email, err)
+	}
+
 	return nil
+}
+
+func GetUserIDByEmail(ctx context.Context, email *string) (int64, berrors.Berror) {
+	uid, err := redis.GetUserIDByEmail(ctx, email)
+	if err == nil && uid != 0 {
+		return uid, nil
+	}
+	if err != nil {
+		hlog.Errorf("GetUserIDByEmail(): cache lookup failed, fallback to db, email: %s, err: %+v", *email, err)
+	}
+
+	usr := model.User{}
+	dbErr := db.WithContext(ctx).
+		Model(&model.User{}).
+		Table(tableUserInfo).
+		Select("user_id", "email").
+		Where("email = ?", *email).
+		Take(&usr).Error
+	if dbErr != nil {
+		if errors.Is(dbErr, gorm.ErrRecordNotFound) {
+			return 0, nil
+		}
+		hlog.Errorf("GetUserIDByEmail(): db lookup failed, email: %s, err: %+v", *email, dbErr)
+		return 0, errDB
+	}
+
+	if err := syncEmailUserIDCache(ctx, usr.UserID, email); err != nil {
+		hlog.Errorf("GetUserIDByEmail(): sync email cache failed, uid: %d, email: %s, err: %+v", usr.UserID, *email, err)
+	}
+
+	return usr.UserID, nil
+}
+
+func syncEmailUserIDCache(ctx context.Context, uid int64, email *string) berrors.Berror {
+	return redis.SetEmailUserID(ctx, uid, email)
 }
 
 func GetUserInfoByID(ctx context.Context, uid int64) (*model.UserInfo, berrors.Berror) {

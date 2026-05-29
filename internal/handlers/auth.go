@@ -52,7 +52,7 @@ func Login(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	uid, err := redis.GetUserIDByEmail(ctx, &eMail)
+	uid, err := rdb.GetUserIDByEmail(ctx, &eMail)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return

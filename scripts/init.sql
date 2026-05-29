@@ -1,7 +1,7 @@
 CREATE TABLE t_user (
     user_id      BIGSERIAL PRIMARY KEY,
     user_name    VARCHAR(50) NOT NULL,
-    email        VARCHAR(50),
+    email        VARCHAR(50) UNIQUE,
     school       INT,
     stu_id       VARCHAR(15),
     belong_team  BIGINT,
@@ -13,7 +13,7 @@ CREATE INDEX idx_user_belong_team ON t_user (belong_team);
 
 CREATE TABLE t_auth (
     user_id BIGINT PRIMARY KEY,
-    email   VARCHAR(50),
+    email   VARCHAR(50) UNIQUE,
     pwd     VARCHAR(100)
 );
 

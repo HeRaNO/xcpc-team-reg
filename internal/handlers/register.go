@@ -6,7 +6,6 @@ import (
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/rdb"
-	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/email"
 	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
 	"github.com/HeRaNO/xcpc-team-reg/pkg/model"
@@ -57,7 +56,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	uid, err := redis.GetUserIDByEmail(ctx, &eMail)
+	uid, err := rdb.GetUserIDByEmail(ctx, &eMail)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return
@@ -117,7 +116,7 @@ func ForgotPwd(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	uid, err := redis.GetUserIDByEmail(ctx, &eMail)
+	uid, err := rdb.GetUserIDByEmail(ctx, &eMail)
 	if err != nil {
 		c.JSON(consts.StatusOK, utils.ErrorResp(err))
 		return

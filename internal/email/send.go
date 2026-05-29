@@ -8,6 +8,7 @@ import (
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
+	"github.com/HeRaNO/xcpc-team-reg/internal/dal/rdb"
 	"github.com/HeRaNO/xcpc-team-reg/internal/dal/redis"
 	"github.com/HeRaNO/xcpc-team-reg/internal/utils"
 	"github.com/wneessen/go-mail"
@@ -71,7 +72,7 @@ func SendEmailWithToken(ctx context.Context, email, emailType *string) berrors.B
 	if _, ok := emailActionMap[*emailType]; !ok {
 		return errInvalidType
 	}
-	uid, err := redis.GetUserIDByEmail(ctx, email)
+	uid, err := rdb.GetUserIDByEmail(ctx, email)
 	if err != nil {
 		return err
 	}
