@@ -2,7 +2,9 @@ package rdb
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/HeRaNO/xcpc-team-reg/internal/berrors"
 	"github.com/HeRaNO/xcpc-team-reg/internal/contest"
@@ -10,38 +12,15 @@ import (
 	"github.com/HeRaNO/xcpc-team-reg/pkg/model"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func GetUserInfosByTeamID(ctx context.Context, tid int64) ([]model.UserInfo, berrors.Berror) {
-	rec := make([]model.User, contest.MaxTeamMember)
-	result := db.Model(&model.User{}).Table(tableUserInfo).Where("belong_team = ?", tid).Find(&rec)
-
-	if result.Error != nil {
-		hlog.Errorf("GetUserInfosByTeamID(): query failed, err: %+v", result.Error)
+	usrInfo, err := getUserInfosByTeamIDQuery(db.WithContext(ctx), tid)
+	if err != nil {
+		hlog.Errorf("GetUserInfosByTeamID(): %+v", err)
 		return nil, errDB
 	}
-	if result.RowsAffected == 0 {
-		hlog.Errorf("GetUserInfosByTeamID(): no user in team, tid: %d", tid)
-		return nil, errDB
-	}
-	if result.RowsAffected > int64(contest.MaxTeamMember) {
-		hlog.Errorf("GetUserInfosByTeamID(): %d user in team, tid: %d", result.RowsAffected, tid)
-		return nil, errDB
-	}
-
-	usrInfo := make([]model.UserInfo, 0)
-
-	for _, usr := range rec {
-		usrInfo = append(usrInfo, model.UserInfo{
-			Name:       usr.Name,
-			School:     usr.School,
-			StuID:      usr.StuID,
-			BelongTeam: usr.BelongTeam,
-			IsUESTCStu: usr.IsUESTCStu,
-			Tshirt:     usr.Tshirt,
-		})
-	}
-
 	return usrInfo, nil
 }
 
@@ -53,13 +32,38 @@ func CreateNewTeam(ctx context.Context, uid int64, team *model.TeamInfoModifyReq
 	}
 
 	trans := db.Begin()
+	if trans.Error != nil {
+		hlog.Errorf("CreateNewTeam(): begin trans failed, err: %+v", trans.Error)
+		return 0, "", errDB
+	}
+
+	usr := model.User{}
+	err := trans.WithContext(ctx).
+		Table(tableUserInfo).
+		Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
+		Where("user_id = ?", uid).
+		Take(&usr).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			hlog.Infof("CreateNewTeam(): no user record, uid: %d", uid)
+			return 0, "", errNoUserRecord
+		}
+		hlog.Errorf("CreateNewTeam(): query user failed, err: %+v", err)
+		return 0, "", errDB
+	}
+	if usr.BelongTeam != 0 {
+		trans.WithContext(ctx).Rollback()
+		return 0, "", errAlreadyInTeam
+	}
+
 	info := model.Team{
 		TeamName:        *team.TeamName,
 		TeamAffiliation: *team.TeamAffiliation,
 		MemberCnt:       1,
 		InviteToken:     inviteToken,
 	}
-	err := trans.WithContext(ctx).Model(&model.Team{}).Table(tableTeamInfo).Create(&info).Error
+	err = trans.WithContext(ctx).Model(&model.Team{}).Table(tableTeamInfo).Create(&info).Error
 	if err != nil {
 		trans.WithContext(ctx).Rollback()
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -71,9 +75,17 @@ func CreateNewTeam(ctx context.Context, uid int64, team *model.TeamInfoModifyReq
 
 	tid := info.TeamID
 
-	err = trans.WithContext(ctx).Table(tableUserInfo).Where("user_id = ?", uid).Update("belong_team", tid).Error
-	if err != nil {
-		hlog.Errorf("CreateNewTeam(): trans update user team id failed, err: %+v", err)
+	result := trans.WithContext(ctx).
+		Table(tableUserInfo).
+		Where("user_id = ? AND belong_team = 0", uid).
+		Update("belong_team", tid)
+	if result.Error != nil {
+		hlog.Errorf("CreateNewTeam(): trans update user team id failed, err: %+v", result.Error)
+		trans.WithContext(ctx).Rollback()
+		return 0, "", errDB
+	}
+	if result.RowsAffected != 1 {
+		hlog.Errorf("CreateNewTeam(): unexpected rows affected when updating user, uid: %d, rows: %d", uid, result.RowsAffected)
 		trans.WithContext(ctx).Rollback()
 		return 0, "", errDB
 	}
@@ -87,21 +99,36 @@ func CreateNewTeam(ctx context.Context, uid int64, team *model.TeamInfoModifyReq
 }
 
 func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*model.TeamInfo, berrors.Berror) {
+	trans, err := beginConsistentRead(ctx)
+	if err != nil {
+		hlog.Errorf("GetTeamInfoByTeamID(): begin read trans failed, err: %+v", err)
+		return nil, errDB
+	}
+
 	rec := make([]model.Team, 0)
-	result := db.Model(&model.Team{}).Table(tableTeamInfo).Where("team_id = ?", tid).Find(&rec)
+	result := trans.Table(tableTeamInfo).Where("team_id = ?", tid).Find(&rec)
 
 	if result.Error != nil {
+		trans.WithContext(ctx).Rollback()
 		hlog.Errorf("GetTeamInfoByTeamID(): query failed, err: %+v", result.Error)
 		return nil, errDB
 	}
 	if result.RowsAffected == 0 {
+		trans.WithContext(ctx).Rollback()
 		hlog.Infof("GetTeamInfoByTeamID(): no team record, tid: %d", tid)
-		return nil, errDB
+		return nil, errNoTeamRecord
 	}
 
-	usrInfo, err := GetUserInfosByTeamID(ctx, tid)
+	usrInfo, err := getUserInfosByTeamIDQuery(trans, tid)
 	if err != nil {
-		return nil, err
+		trans.WithContext(ctx).Rollback()
+		hlog.Errorf("GetTeamInfoByTeamID(): %+v", err)
+		return nil, errDB
+	}
+	if err := validateRecordedTeamMembers(tid, rec[0].MemberCnt, len(usrInfo)); err != nil {
+		trans.WithContext(ctx).Rollback()
+		hlog.Errorf("GetTeamInfoByTeamID(): %+v", err)
+		return nil, errDB
 	}
 
 	teamInfo := &model.TeamInfo{
@@ -113,6 +140,10 @@ func GetTeamInfoByTeamID(ctx context.Context, tid int64) (*model.TeamInfo, berro
 		TeamMember:      usrInfo,
 		MemberCnt:       rec[0].MemberCnt,
 		TeamAffiliation: rec[0].TeamAffiliation,
+	}
+	if err := trans.Commit().Error; err != nil {
+		hlog.Errorf("GetTeamInfoByTeamID(): commit read trans failed, err: %+v", err)
+		return nil, errDB
 	}
 	return teamInfo, nil
 }
@@ -156,6 +187,130 @@ func GetAllTeams() ([]model.Team, error) {
 		return nil, err
 	}
 	return teams, nil
+}
+
+func GetAllTeamInfos(ctx context.Context) ([]model.TeamInfo, error) {
+	trans, err := beginConsistentRead(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	teams := make([]model.Team, 0)
+	err = trans.Model(&model.Team{}).Table(tableTeamInfo).Order("team_id asc").Find(&teams).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return nil, err
+	}
+	if len(teams) == 0 {
+		trans.WithContext(ctx).Rollback()
+		return []model.TeamInfo{}, nil
+	}
+
+	teamIDs := make([]int64, 0, len(teams))
+	for _, team := range teams {
+		teamIDs = append(teamIDs, team.TeamID)
+	}
+
+	users := make([]model.User, 0)
+	err = trans.
+		Model(&model.User{}).
+		Table(tableUserInfo).
+		Where("belong_team IN ?", teamIDs).
+		Order("belong_team asc, user_id asc").
+		Find(&users).Error
+	if err != nil {
+		trans.WithContext(ctx).Rollback()
+		return nil, err
+	}
+
+	memberMap := make(map[int64][]model.UserInfo, len(teams))
+	for _, usr := range users {
+		memberMap[usr.BelongTeam] = append(memberMap[usr.BelongTeam], buildUserInfo(usr))
+	}
+
+	teamInfos := make([]model.TeamInfo, 0, len(teams))
+	for _, team := range teams {
+		members := memberMap[team.TeamID]
+		if err := validateRecordedTeamMembers(team.TeamID, team.MemberCnt, len(members)); err != nil {
+			trans.WithContext(ctx).Rollback()
+			hlog.Errorf("GetAllTeamInfos(): %+v", err)
+			return nil, err
+		}
+		teamInfos = append(teamInfos, model.TeamInfo{
+			TeamID:          team.TeamID,
+			TeamName:        team.TeamName,
+			TeamAccount:     team.TeamAccount,
+			TeamPassword:    team.TeamPassword,
+			InviteToken:     team.InviteToken,
+			TeamMember:      members,
+			MemberCnt:       team.MemberCnt,
+			TeamAffiliation: team.TeamAffiliation,
+		})
+	}
+
+	if err := trans.Commit().Error; err != nil {
+		return nil, err
+	}
+	return teamInfos, nil
+}
+
+func beginConsistentRead(ctx context.Context) (*gorm.DB, error) {
+	trans := db.WithContext(ctx).Begin(&sql.TxOptions{
+		ReadOnly:  true,
+		Isolation: sql.LevelRepeatableRead,
+	})
+	if trans.Error != nil {
+		return nil, trans.Error
+	}
+	return trans, nil
+}
+
+func getUserInfosByTeamIDQuery(query *gorm.DB, tid int64) ([]model.UserInfo, error) {
+	rec := make([]model.User, 0, contest.MaxTeamMember)
+	result := query.Model(&model.User{}).Table(tableUserInfo).Where("belong_team = ?", tid).Find(&rec)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if err := validateActualTeamMembers(tid, len(rec)); err != nil {
+		return nil, err
+	}
+
+	usrInfo := make([]model.UserInfo, 0, len(rec))
+	for _, usr := range rec {
+		usrInfo = append(usrInfo, buildUserInfo(usr))
+	}
+	return usrInfo, nil
+}
+
+func buildUserInfo(usr model.User) model.UserInfo {
+	return model.UserInfo{
+		Name:       usr.Name,
+		School:     usr.School,
+		StuID:      usr.StuID,
+		BelongTeam: usr.BelongTeam,
+		IsUESTCStu: usr.IsUESTCStu,
+		Tshirt:     usr.Tshirt,
+	}
+}
+
+func validateActualTeamMembers(tid int64, actualCnt int) error {
+	if actualCnt == 0 {
+		return fmt.Errorf("team has no user record, tid: %d", tid)
+	}
+	if actualCnt > contest.MaxTeamMember {
+		return fmt.Errorf("team member cnt exceeds limit, tid: %d, actual: %d", tid, actualCnt)
+	}
+	return nil
+}
+
+func validateRecordedTeamMembers(tid int64, recordedCnt, actualCnt int) error {
+	if err := validateActualTeamMembers(tid, actualCnt); err != nil {
+		return err
+	}
+	if recordedCnt != actualCnt {
+		return fmt.Errorf("team member cnt mismatched, tid: %d, recorded: %d, actual: %d", tid, recordedCnt, actualCnt)
+	}
+	return nil
 }
 
 func SetTeamAccPwdByID(tid int64, acc, pwd *string) error {

@@ -42,18 +42,14 @@ func main() {
 	ctx := context.Background()
 	idSchoolMap = contest.GetIDSchoolMap()
 
-	teams, err := rdb.GetAllTeams()
+	teamInfos, err := rdb.GetAllTeamInfos(ctx)
 	if err != nil {
-		hlog.Fatalf("cannot get all teams, err: %s", err.Error())
+		hlog.Fatalf("cannot get all team infos, err: %s", err.Error())
 	}
 
-	allTeamInfo := make([]FullTeamInfo, 0)
+	allTeamInfo := make([]FullTeamInfo, 0, len(teamInfos))
 
-	for _, team := range teams {
-		fullTeamInfo, err := rdb.GetTeamInfoByTeamID(ctx, team.TeamID)
-		if err != nil {
-			hlog.Fatalf("cannot get team info, tid: %d, err: %s", team.TeamID, err.Msg())
-		}
+	for _, fullTeamInfo := range teamInfos {
 		isUESTCTeam := true
 		isFreshmanTeam := false
 		for _, member := range fullTeamInfo.TeamMember {
