@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"html/template"
 	"sync"
@@ -11,12 +12,16 @@ import (
 	"github.com/HeRaNO/xcpc-team-reg/internal/email"
 	"github.com/HeRaNO/xcpc-team-reg/pkg/model"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"golang.org/x/time/rate"
 )
 
 type TeamAcc struct {
 	TeamAccount  string
 	TeamPassword string
 }
+
+const maxEmailPerSecond = 15
+const maxEmailWorkers = 100
 
 func main() {
 	initConfigFile := flag.String("c", "./configs/conf.yaml", "the path of configure file")
@@ -50,25 +55,43 @@ func main() {
 
 	failed := sync.Map{}
 	wg := sync.WaitGroup{}
-	for _, usr := range usrs {
+	limiter := rate.NewLimiter(rate.Limit(maxEmailPerSecond), 1)
+	jobs := make(chan model.User)
+	ctx := context.Background()
+
+	workerCnt := min(maxEmailWorkers, len(usrs))
+	for range workerCnt {
 		wg.Add(1)
-		go func(usr model.User) {
+		go func() {
 			defer wg.Done()
-			acc, ok := teamMap[usr.BelongTeam]
-			if !ok {
-				hlog.Errorf("send email error, usr: %+v, cannot find belong_team", usr)
-				failed.Store(usr.UserID, true)
-				return
+			for usr := range jobs {
+				if err := limiter.Wait(ctx); err != nil {
+					hlog.Errorf("wait rate limiter failed, usr: %+v, err: %s", usr, err.Error())
+					failed.Store(usr.UserID, true)
+					continue
+				}
+
+				acc, ok := teamMap[usr.BelongTeam]
+				if !ok {
+					hlog.Errorf("send email error, usr: %+v, cannot find belong_team", usr)
+					failed.Store(usr.UserID, true)
+					continue
+				}
+				err := email.SendTeamAccountEmail(tmpl, &usr.Name, &contestName, &acc.TeamAccount, &acc.TeamPassword, &usr.Email, subject)
+				if err != nil {
+					hlog.Errorf("send email error, usr: %+v, err: %s", usr, err.Error())
+					failed.Store(usr.UserID, true)
+				} else {
+					hlog.Infof("send email ok, user_id: %d", usr.UserID)
+				}
 			}
-			err := email.SendTeamAccountEmail(tmpl, &usr.Name, &contestName, &acc.TeamAccount, &acc.TeamPassword, &usr.Email, subject)
-			if err != nil {
-				hlog.Errorf("send email error, usr: %+v, err: %s", usr, err.Error())
-				failed.Store(usr.UserID, true)
-			} else {
-				hlog.Infof("send email ok, user_id: %d", usr.UserID)
-			}
-		}(usr)
+		}()
 	}
+
+	for _, usr := range usrs {
+		jobs <- usr
+	}
+	close(jobs)
 	wg.Wait()
 
 	failedIDs := make([]int64, 0)
