@@ -23,3 +23,7 @@
 # local test folder
 configs/conf.yaml
 builds/*
+
+# AI stuff
+.agents/*
+.codex
